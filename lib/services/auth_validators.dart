@@ -21,7 +21,7 @@ class Validators {
     if (v.length < 8) return 'Password must be at least 8 characters';
     final hasLetter = RegExp(r'[A-Za-z]').hasMatch(v);
     final hasNumber = RegExp(r'\d').hasMatch(v);
-    if (!hasLetter || !hasNumber) return 'Use letters and numbers';
+    if (!hasLetter || !hasNumber) return 'Use Upper case and Lower case letters and numbers';
     return null;
   }
 }
