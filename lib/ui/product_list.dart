@@ -33,7 +33,7 @@ class ProductList extends StatelessWidget {
 
             return Flexible(
               fit: FlexFit.loose,
-              child: ListView.builder(
+              child: ListView.separated(
                 itemCount: productList.length,
                 itemBuilder: (context, index) {
                   final product = productList[index];
@@ -66,6 +66,9 @@ class ProductList extends StatelessWidget {
                       ],
                     ),
                   );
+                },
+                separatorBuilder: (context, index) {
+                  return const Divider(thickness: 1, height: 1);
                 },
               ),
             );

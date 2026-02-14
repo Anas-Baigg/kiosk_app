@@ -6,7 +6,7 @@ import 'package:kiosk_app/services/sync_service.dart';
 import 'package:uuid/uuid.dart';
 
 class TillBalanceDialog {
-  static Future<void> checkAndShow(BuildContext context) async {
+  static Future<bool> checkAndShow(BuildContext context) async {
     final now = DateTime.now();
     final todayMidnight = DateTime(now.year, now.month, now.day);
     final db = DatabaseService.instance;
@@ -14,14 +14,16 @@ class TillBalanceDialog {
     final existing = await db.getTillBalanceByDate(todayMidnight);
 
     // If today already has a balance  nothing to do
-    if (existing != null) return;
+    if (existing != null) return true;
 
-    // Opening balance missing  show dialog (forced)
-    await _showOpeningDialog(context, todayMidnight);
+    // Show dialog and wait for result
+    final result = await _showOpeningDialog(context, todayMidnight);
+
+    return result ?? false;
   }
 
   /// INTERNAL: Show modal dialog
-  static Future<void> _showOpeningDialog(
+  static Future<bool?> _showOpeningDialog(
     BuildContext context,
     DateTime today,
   ) async {
@@ -74,7 +76,7 @@ class TillBalanceDialog {
                 await DatabaseService.instance.insertTillBalance(model);
                 final syncService = SyncService();
                 syncService.syncTillbalance();
-                Navigator.pop(context);
+                Navigator.pop(context, true);
               },
               child: const Text("Save"),
             ),

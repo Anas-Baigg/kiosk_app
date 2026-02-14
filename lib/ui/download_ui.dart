@@ -1,33 +1,35 @@
 import 'package:flutter/material.dart';
+import 'package:kiosk_app/services/download_service.dart';
 import 'package:kiosk_app/services/sync_service.dart';
 
-class SyncUIService {
-  static Future<void> performSync(
+class DownloadUIService {
+  static Future<void> performDownload(
     BuildContext context,
     Function(bool) setSyncing,
   ) async {
     setSyncing(true);
 
     final syncService = SyncService();
+    final pullSerice = PullService();
 
     // 1. Check internet first
     if (!await syncService.isOnline()) {
       setSyncing(false);
       _showErrorDialog(
         context,
-        "No connection. Data is safe locally and will sync when Wi-Fi returns.",
+        "No connection. Data is safe locally and will download when Wi-Fi returns.",
       );
       return;
     }
 
     try {
-      bool success = await syncService.syncAll();
+      bool success = await pullSerice.fullDownloadFromCloud(historyDays: 30);
       if (!context.mounted) return;
 
       if (success) {
         _showSuccessDialog(context);
       } else {
-        _showErrorDialog(context, "Sync encountered an error.");
+        _showErrorDialog(context, "Download encountered an error.");
       }
     } catch (e) {
       if (!context.mounted) return;
@@ -52,7 +54,7 @@ class SyncUIService {
             ),
             const SizedBox(height: 16),
             const Text(
-              "Cloud Sync Complete",
+              "Cloud Download Complete",
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
             const SizedBox(height: 8),
@@ -80,7 +82,7 @@ class SyncUIService {
           children: [
             Icon(Icons.error_outline, color: Colors.red),
             SizedBox(width: 10),
-            Text("Sync Failed"),
+            Text("Download Failed"),
           ],
         ),
         content: Text(error),

@@ -421,10 +421,10 @@ class DatabaseService {
     final db = await database;
     final uuid = const Uuid();
 
-    // 1. Generate ONE transaction UUID
+    //Generate ONE transaction UUID
     final transactionId = uuid.v4();
 
-    // 2. Create a new header with the generated ID
+    //Create a new header with the generated ID
     final headerWithId = TransactionHeader(
       id: transactionId,
       employeeId: header.employeeId,
@@ -439,14 +439,14 @@ class DatabaseService {
     );
 
     await db.transaction((txn) async {
-      // 3. Insert header
+      //Insert header
       await txn.insert(
         tableTransactions,
         headerWithId.toMap(),
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
 
-      // 4. Insert all items
+      //Insert all items
       for (final item in items) {
         final itemWithIds = TransactionItem(
           id: uuid.v4(),
@@ -467,7 +467,7 @@ class DatabaseService {
       }
     });
 
-    // 5. Return the UUID, not an int
+    //Return the UUID
     return transactionId;
   }
 

@@ -33,7 +33,7 @@ class ServiceList extends StatelessWidget {
 
             return Flexible(
               fit: FlexFit.loose,
-              child: ListView.builder(
+              child: ListView.separated(
                 itemCount: cutsList.length,
                 itemBuilder: (context, i) {
                   final cut = cutsList[i];
@@ -44,6 +44,7 @@ class ServiceList extends StatelessWidget {
                     subtitle: Text("€${cut.price}"),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
+
                       children: [
                         IconButton(
                           onPressed: () => onDecrement(key),
@@ -63,6 +64,9 @@ class ServiceList extends StatelessWidget {
                       ],
                     ),
                   );
+                },
+                separatorBuilder: (context, index) {
+                  return const Divider(thickness: 1, height: 1);
                 },
               ),
             );

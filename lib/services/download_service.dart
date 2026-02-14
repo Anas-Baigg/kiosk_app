@@ -12,7 +12,7 @@ class PullService {
 
   // ---------------- Public API ----------------
 
-  Future<void> fullDownloadFromCloud({int historyDays = 60}) async {
+  Future<bool> fullDownloadFromCloud({int historyDays = 30}) async {
     debugPrint("Starting Full Sync: Pruning then Downloading...");
 
     // 1. CLEANUP FIRST: Remove old local data to prevent FK conflicts and clutter
@@ -25,8 +25,8 @@ class PullService {
 
     // 3. DOWNLOAD FRESH DATA: Pull the window of history you want to keep
     await downloadRecentHistory(historyDays: historyDays);
-
     debugPrint("Full Sync complete.");
+    return true;
   }
 
   // 1) Employees (Supabase: employee)
@@ -99,8 +99,6 @@ class PullService {
           final List<dynamic> itemData = await _supabase
               .from('transaction_items')
               .select()
-              // If your transaction_items also has shop_id, keep this filter.
-              // If it doesn't, remove it.
               .eq('shop_id', currentShopId)
               .inFilter('transaction_id', chunk);
 
