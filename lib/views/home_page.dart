@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:kiosk_app/screens/app_state.dart';
 import 'package:kiosk_app/services/admin_auth_service.dart';
-import 'package:kiosk_app/services/download_service.dart';
 import 'package:kiosk_app/services/home_tile.dart';
 import 'package:kiosk_app/ui/download_ui.dart';
 import 'package:kiosk_app/ui/sync_ui.dart';
+import 'package:kiosk_app/views/check_tip.dart';
 import 'package:kiosk_app/views/transactions.dart';
 import 'package:kiosk_app/ui/gradient_scaffold.dart';
 import 'clocks_dialogs.dart';
@@ -116,6 +116,16 @@ class _HomePageState extends State<HomePage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => Transactions()),
+                  );
+                },
+              ),
+              HomeTileButton(
+                icon: Icons.money,
+                label: "Check Tip",
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => CheckTip()),
                   );
                 },
               ),

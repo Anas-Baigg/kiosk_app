@@ -599,7 +599,7 @@ class DatabaseService {
 
   // -----------------------------
   // Local retention / purge
-  Future<void> purgeOldHistory({int keepDays = 60}) async {
+  Future<void> purgeOldHistory({int keepDays = 30}) async {
     final db = await database;
 
     // Use "start of day" so retention behaves like "keep last N calendar days"
@@ -655,5 +655,60 @@ class DatabaseService {
         whereArgs: [currentShopId, cutoffDateStr],
       );
     });
+  }
+
+  //-----------------------------------------------------------
+  // check tips
+  Future<List<Map<String, dynamic>>> getAllActiveEmployees() async {
+    final db = await database;
+    return db.query(
+      tableEmployee,
+      columns: [colEmployeeId, colName],
+      where: '$colIsActive = 1 AND $colShopId = ?',
+      whereArgs: [currentShopId],
+      orderBy: '$colName COLLATE NOCASE',
+    );
+  }
+
+  Future<Map<String, double>> getEmployeeTipsForDate(
+    String employeeId,
+    DateTime date,
+  ) async {
+    final db = await database;
+
+    final startOfDay = DateTime(date.year, date.month, date.day);
+    final startOfNextDay = DateTime(date.year, date.month, date.day + 1);
+
+    final fromIso = startOfDay.toUtc().toIso8601String();
+    final toIsoExclusive = startOfNextDay.toUtc().toIso8601String();
+
+    final rows = await db.rawQuery(
+      '''
+
+    SELECT $colPaymentMethod, SUM($colTip) as total_tip
+    FROM $tableTransactions
+    WHERE $colTransactionEmpId = ? 
+      AND $colShopId = ? 
+      AND $colCreatedAt >= ? 
+      AND $colCreatedAt < ?
+    GROUP BY $colPaymentMethod
+    ''',
+      [employeeId, currentShopId, fromIso, toIsoExclusive],
+    );
+
+    double cashTips = 0.0;
+    double cardTips = 0.0;
+
+    for (var row in rows) {
+      final method = (row[colPaymentMethod] as String).toLowerCase();
+      final total = (row['total_tip'] as num?)?.toDouble() ?? 0.0;
+
+      if (method.contains("cash")) {
+        cashTips += total;
+      } else {
+        cardTips += total;
+      }
+    }
+    return {'Cash': cashTips, 'Card': cardTips};
   }
 }

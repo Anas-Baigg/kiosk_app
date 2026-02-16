@@ -250,8 +250,7 @@ class _ReportsPageState extends State<ReportsPage> {
   Future<void> _syncReports() async {
     setState(() => _isSyncing = true);
     try {
-      // This calls your PullService to get fresh history (Transactions & Logs)
-      await PullService().downloadRecentHistory(historyDays: 60);
+      await PullService().downloadRecentHistory(historyDays: 30);
 
       await _runSearch();
 
@@ -283,7 +282,7 @@ class _ReportsPageState extends State<ReportsPage> {
         crossAxisAlignment:
             CrossAxisAlignment.start, // Align widgets to the top
         children: [
-          // LEFT COLUMN: Date Picker and Time Logs (approx. 40% width)
+          // LEFT COLUMN: Date Picker and Time Logs
           Expanded(
             flex: 4,
             child: Column(

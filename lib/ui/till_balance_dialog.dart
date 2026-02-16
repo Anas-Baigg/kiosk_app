@@ -29,7 +29,7 @@ class TillBalanceDialog {
   ) async {
     final TextEditingController controller = TextEditingController();
 
-    await showDialog(
+    return await showDialog(
       context: context,
       barrierDismissible: false,
       builder: (_) {

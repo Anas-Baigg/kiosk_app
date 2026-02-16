@@ -177,7 +177,7 @@ class _ShopSelectionScreenState extends State<ShopSelectionScreen> {
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Padding(
-                      padding: EdgeInsets.all(isWide ? 24 : 0),
+                      padding: EdgeInsets.all(isWide ? 24 : 12),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -242,9 +242,7 @@ class _ShopSelectionScreenState extends State<ShopSelectionScreen> {
                               },
                             ),
 
-                          const SizedBox(height: 18),
                           const Divider(),
-                          const SizedBox(height: 14),
 
                           Text(
                             'Create a new shop',

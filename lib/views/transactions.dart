@@ -46,7 +46,9 @@ class _TransactionsState extends State<Transactions> {
   void initState() {
     super.initState();
 
-    _checkBalance();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkBalance();
+    });
 
     _reloadActiveEmployees();
     _loadData();
@@ -56,8 +58,9 @@ class _TransactionsState extends State<Transactions> {
     final allowed = await TillBalanceDialog.checkAndShow(context);
 
     if (!mounted) return;
+
     if (!allowed) {
-      Navigator.pop(context);
+      Navigator.of(context).pop();
     }
   }
 
