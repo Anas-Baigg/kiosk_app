@@ -12,7 +12,7 @@ class ClockDialog {
     final TextEditingController passController = TextEditingController();
     final bool isIn = action == ClockDialogAction.clockIn;
 
-    return await showDialog<bool>(
+    final result = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
@@ -197,5 +197,7 @@ class ClockDialog {
         );
       },
     );
+    passController.dispose();
+    return result;
   }
 }

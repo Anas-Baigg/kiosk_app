@@ -68,22 +68,34 @@ class EmployeeDropdown extends StatelessWidget {
           );
         }
 
-        return DropdownButtonFormField<String>(
-          value: selectedEmployeeId,
+        return Center(
+          child: Container(
+            constraints: const BoxConstraints(
+              maxWidth: 700,
+            ), // Limits the whole form width
+            child: Column(
+              children: [
+                DropdownButtonFormField<String>(
+                  value: selectedEmployeeId,
 
-          decoration: const InputDecoration(
-            labelText: 'Active Employee',
-            border: OutlineInputBorder(),
-          ),
-          items: rows
-              .map(
-                (m) => DropdownMenuItem<String>(
-                  value: m['id'],
-                  child: Text(m['name']),
+                  decoration: const InputDecoration(
+                    labelText: 'Active Employee',
+                    border: OutlineInputBorder(),
+                  ),
+
+                  items: rows
+                      .map(
+                        (m) => DropdownMenuItem<String>(
+                          value: m['id'],
+                          child: Text(m['name']),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: onChanged,
                 ),
-              )
-              .toList(),
-          onChanged: onChanged,
+              ],
+            ),
+          ),
         );
       },
     );

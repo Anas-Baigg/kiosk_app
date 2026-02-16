@@ -18,19 +18,22 @@ class UniversalScaffold extends StatelessWidget {
   });
 
   Future<void> _logout(BuildContext context) async {
+    final navigator = Navigator.of(context);
+
+    //Clear your local state
     AppState.shopId = null;
     AppState.shopName = null;
     AppState.adminPassword = null;
-    // Clear saved shop
-    await ShopStorage.clear();
 
-    // Sign out from Supabase
-    await Supabase.instance.client.auth.signOut();
+    try {
+      // async operations
+      await ShopStorage.clear();
+      await Supabase.instance.client.auth.signOut();
 
-    if (!context.mounted) return;
-
-    // Remove all routes and go to auth screen
-    Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+      navigator.pushNamedAndRemoveUntil('/', (route) => false);
+    } catch (e) {
+      debugPrint("Logout failed: $e");
+    }
   }
 
   void _confirmLogout(BuildContext context) {
