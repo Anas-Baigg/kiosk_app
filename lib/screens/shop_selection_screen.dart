@@ -6,6 +6,7 @@ import 'package:kiosk_app/services/shop_name.dart';
 import 'package:kiosk_app/ui/gradient_scaffold.dart';
 import 'package:kiosk_app/views/home_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:bcrypt/bcrypt.dart';
 
 class ShopSelectionScreen extends StatefulWidget {
   const ShopSelectionScreen({super.key});
@@ -50,7 +51,7 @@ class _ShopSelectionScreenState extends State<ShopSelectionScreen> {
     try {
       final data = await _supabase
           .from('shops')
-          .select('id, name, admin_password')
+          .select('id, name, admin_password_hash')
           .eq('owner_id', user.id)
           .order('name');
 
@@ -77,13 +78,14 @@ class _ShopSelectionScreenState extends State<ShopSelectionScreen> {
     final ok = _createFormKey.currentState?.validate() ?? false;
     if (!ok) return;
     final name = _shopNameController.text.trim();
-    final adminPassword = int.parse(_adminPassController.text.trim());
+    final rawPin = _adminPassController.text.trim();
+    final hashedPin = BCrypt.hashpw(rawPin, BCrypt.gensalt());
     setState(() => _creating = true);
     try {
       await _supabase.from('shops').insert({
         'name': name,
         'owner_id': user.id,
-        'admin_password': adminPassword,
+        'admin_password': hashedPin,
       });
 
       _shopNameController.clear();
@@ -129,14 +131,14 @@ class _ShopSelectionScreenState extends State<ShopSelectionScreen> {
     try {
       final id = shop['id'].toString();
       final name = (shop['name'] ?? '').toString();
-      final adminPassword = (shop['admin_password']);
+      final adminPasswordHash = (shop['admin_password_hash']) as String?;
       AppState.shopId = id;
       AppState.shopName = name;
-      AppState.adminPassword = adminPassword;
+      AppState.adminPasswordHash = adminPasswordHash;
       await ShopStorage.saveShop(
         id: id,
         name: name,
-        adminPassword: adminPassword,
+        adminPasswordHash: adminPasswordHash ?? '',
       );
       await PullService().fullDownloadFromCloud();
       if (mounted) {

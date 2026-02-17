@@ -1,3 +1,4 @@
+import 'package:bcrypt/bcrypt.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kiosk_app/screens/app_state.dart';
@@ -5,8 +6,8 @@ import 'package:kiosk_app/views/admin_page.dart';
 
 class AdminAuthService {
   static void showAdminAccessDialog(BuildContext context) {
-    final TextEditingController _passController = TextEditingController();
-    final _formKey = GlobalKey<FormState>();
+    final TextEditingController passController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
 
     showDialog(
       context: context,
@@ -18,14 +19,14 @@ class AdminAuthService {
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
         ),
         content: Form(
-          key: _formKey,
+          key: formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               const Text('Please enter the 5-digit Admin Password'),
               const SizedBox(height: 16),
               TextFormField(
-                controller: _passController,
+                controller: passController,
                 obscureText: true,
                 keyboardType: TextInputType.number,
                 autofocus: true,
@@ -46,13 +47,19 @@ class AdminAuthService {
                 validator: (value) {
                   if (value == null || value.isEmpty) return 'Required';
 
-                  if (value != AppState.adminPassword.toString()) {
+                  final storedHash = AppState.adminPasswordHash;
+                  if (storedHash == null || storedHash.isEmpty) {
+                    return 'System Error: No password set';
+                  }
+                  final isCorrect = BCrypt.checkpw(value, storedHash);
+
+                  if (!isCorrect) {
                     return 'Incorrect Password';
                   }
                   return null;
                 },
                 onFieldSubmitted: (_) =>
-                    _handleVerify(context, _formKey, _passController),
+                    _handleVerify(context, formKey, passController),
               ),
             ],
           ),
@@ -64,7 +71,7 @@ class AdminAuthService {
             child: const Text("Cancel"),
           ),
           ElevatedButton(
-            onPressed: () => _handleVerify(context, _formKey, _passController),
+            onPressed: () => _handleVerify(context, formKey, passController),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green[600],
               shape: RoundedRectangleBorder(

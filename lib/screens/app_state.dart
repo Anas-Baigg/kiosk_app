@@ -1,7 +1,7 @@
 class AppState {
   static String? shopId;
   static String? shopName;
-  static int? adminPassword;
+  static String? adminPasswordHash;
 
   static String requireShopId() {
     final id = shopId;

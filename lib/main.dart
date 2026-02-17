@@ -26,7 +26,7 @@ class MyApp extends StatelessWidget {
   Future<void> _loadShopIntoMemory() async {
     AppState.shopId = await ShopStorage.getShopId();
     AppState.shopName = await ShopStorage.getShopName();
-    AppState.adminPassword = await ShopStorage.getAdminPassword();
+    AppState.adminPasswordHash = await ShopStorage.getAdminPasswordHash();
   }
 
   @override
@@ -72,9 +72,10 @@ class MyApp extends StatelessWidget {
                 );
               }
               final shopId = AppState.shopId;
-              final adminPassword = AppState.adminPassword;
-              if ((shopId != null && shopId.isNotEmpty) ||
-                  (adminPassword != null)) {
+              final adminPassword = AppState.adminPasswordHash;
+              if (shopId != null &&
+                  shopId.isNotEmpty &&
+                  adminPassword != null) {
                 return const HomePage();
               }
               return const ShopSelectionScreen();

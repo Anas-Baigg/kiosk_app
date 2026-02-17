@@ -23,7 +23,7 @@ class UniversalScaffold extends StatelessWidget {
     //Clear your local state
     AppState.shopId = null;
     AppState.shopName = null;
-    AppState.adminPassword = null;
+    AppState.adminPasswordHash = null;
 
     try {
       // async operations
