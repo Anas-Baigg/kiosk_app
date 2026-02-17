@@ -152,7 +152,7 @@ class ClockDialog {
                             });
 
                             // Auto-sync time logs after clock in
-                            final syncService = SyncService();
+                            final syncService = SyncService.instance;
                             syncService.syncTimeLogs();
 
                             await Future.delayed(const Duration(seconds: 1));
@@ -171,7 +171,7 @@ class ClockDialog {
                             });
 
                             // Auto-sync time logs after clock out
-                            final syncService = SyncService();
+                            final syncService = SyncService.instance;
                             syncService.syncTimeLogs();
 
                             await Future.delayed(const Duration(seconds: 1));

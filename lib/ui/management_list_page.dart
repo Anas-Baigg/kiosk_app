@@ -90,7 +90,7 @@ class _GenericManagementPageState<T> extends State<GenericManagementPage<T>> {
   // Helper method to decide which sync to run
   void _triggerSync() {
     final table = widget.config.tableName;
-    final sync = SyncService();
+    final sync = SyncService.instance;
 
     if (table == DatabaseService.tableEmployee) {
       sync.syncEmployees();

@@ -160,7 +160,8 @@ class _TransactionsState extends State<Transactions> {
       });
       // Show success message
       if (mounted) {
-        SyncService().syncTransactions();
+        final syncService = SyncService.instance;
+        syncService.syncTransactions();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Transaction saved successfully!')),
         );

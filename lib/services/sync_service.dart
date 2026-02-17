@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:kiosk_app/screens/app_state.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -5,229 +7,287 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'database_service.dart';
 
 class SyncService {
+  SyncService._internal();
+  static final SyncService instance = SyncService._internal();
+
   final _supabase = Supabase.instance.client;
   final _dbService = DatabaseService.instance;
-  String get currentShopId => AppState.requireShopId();
 
-  Future<void> syncTransactions() async {
-    final db = await _dbService.database;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
 
-    final List<Map<String, dynamic>> unsyncedHeaders = await db.query(
-      DatabaseService.tableTransactions,
-      where:
-          '${DatabaseService.colLastSynced} IS NULL AND ${DatabaseService.colShopId} = ?',
-      whereArgs: [currentShopId],
-    );
-    if (unsyncedHeaders.isEmpty) return;
-    for (var headerMap in unsyncedHeaders) {
-      try {
-        final String txId = headerMap[DatabaseService.colTransactionId];
-        final List<Map<String, dynamic>> items = await db.query(
-          DatabaseService.tableTransactionItems,
-          where:
-              '${DatabaseService.colItemTransactionId} = ? AND ${DatabaseService.colShopId} = ?',
-          whereArgs: [txId, currentShopId],
-        );
-        await _supabase.from('transactions').upsert(headerMap);
+  bool _isSyncing = false;
 
-        if (items.isNotEmpty) {
-          await _supabase.from('transaction_items').upsert(items);
-        }
-        final nowIso = DateTime.now().toUtc().toIso8601String();
-        await db.update(
-          DatabaseService.tableTransactions,
-          {DatabaseService.colLastSynced: nowIso},
-          where:
-              '${DatabaseService.colTransactionId} = ? AND ${DatabaseService.colShopId} = ?',
-          whereArgs: [txId, currentShopId],
-        );
-        await db.update(
-          DatabaseService.tableTransactionItems,
-          {DatabaseService.colLastSynced: nowIso},
-          where:
-              '${DatabaseService.colItemTransactionId} = ? AND ${DatabaseService.colShopId} = ?',
-          whereArgs: [txId, currentShopId],
-        );
-      } catch (e) {
-        debugPrint(
-          "Error syncing transaction ${headerMap[DatabaseService.colTransactionId]}: $e",
-        );
-      }
-    }
+  // Debounce connectivity-triggered sync storms
+  Timer? _debounceTimer;
+
+  // ---------- Safe getters / guards ----------
+
+  String? get _shopIdSafe {
+    final id = AppState.shopId;
+    if (id == null || id.isEmpty) return null;
+    return id;
   }
 
-  Future<void> syncEmployees() async {
-    final db = await _dbService.database;
+  // ---------- Public API ----------
 
-    // 1. Get unsynced employees
-    final List<Map<String, dynamic>> unsynced = await db.query(
-      DatabaseService.tableEmployee,
-      where:
-          '${DatabaseService.colLastSynced} IS NULL AND ${DatabaseService.colShopId} = ?',
-      whereArgs: [currentShopId],
-    );
+  /// Call once (ideally after Supabase init). Safe to call multiple times.
+  void initConnectivityMonitoring() {
+    _connectivitySub ??= Connectivity().onConnectivityChanged.listen((results) {
+      final hasNetwork =
+          results.isNotEmpty && !results.contains(ConnectivityResult.none);
+      if (!hasNetwork) return;
 
-    if (unsynced.isEmpty) return;
+      // If shop isn't selected yet, do nothing (prevents requireShopId crash)
+      if (_shopIdSafe == null) return;
 
-    for (var empMap in unsynced) {
-      try {
-        // 2. Upload to Supabase
-        await _supabase.from('employee').upsert(empMap);
-
-        // 3. Mark as synced locally
-        final nowIso = DateTime.now().toUtc().toIso8601String();
-        await db.update(
-          DatabaseService.tableEmployee,
-          {DatabaseService.colLastSynced: nowIso},
-          where:
-              '${DatabaseService.colEmployeeId} = ? AND ${DatabaseService.colShopId} = ?',
-          whereArgs: [empMap[DatabaseService.colEmployeeId], currentShopId],
-        );
-      } catch (e) {
-        debugPrint("Error syncing employee: $e");
-      }
-    }
+      // Debounce multiple events
+      _debounceTimer?.cancel();
+      _debounceTimer = Timer(const Duration(seconds: 2), () async {
+        debugPrint("Connection restored: Triggering auto-sync...");
+        await syncAll();
+      });
+    });
   }
 
-  Future<void> syncTillbalance() async {
-    final db = await _dbService.database;
-
-    final List<Map<String, dynamic>> unsyncedTill = await db.query(
-      DatabaseService.tableTillBalance,
-      where:
-          '${DatabaseService.colLastSynced} IS NULL AND ${DatabaseService.colShopId} = ?',
-      whereArgs: [currentShopId],
-    );
-
-    if (unsyncedTill.isEmpty) return;
-    for (var tillMap in unsyncedTill) {
-      try {
-        await _supabase.from('till_balance').upsert(tillMap);
-        final nowIso = DateTime.now().toUtc().toIso8601String();
-        await db.update(
-          DatabaseService.tableTillBalance,
-          {DatabaseService.colLastSynced: nowIso},
-          where:
-              '${DatabaseService.colTillBalanceId} = ? AND ${DatabaseService.colShopId} = ?',
-          whereArgs: [tillMap[DatabaseService.colTillBalanceId], currentShopId],
-        );
-      } catch (e) {
-        debugPrint("Error syncing till_balance: $e");
-      }
-    }
+  void dispose() {
+    _debounceTimer?.cancel();
+    _debounceTimer = null;
+    _connectivitySub?.cancel();
+    _connectivitySub = null;
   }
 
-  Future<void> syncProducts() async {
-    final db = await _dbService.database;
-    final List<Map<String, dynamic>> unsyncedProducts = await db.query(
-      DatabaseService.tableProducts,
-      where:
-          '${DatabaseService.colLastSynced} IS NULL AND ${DatabaseService.colShopId} = ?',
-      whereArgs: [currentShopId],
-    );
-
-    if (unsyncedProducts.isEmpty) return;
-    for (var products in unsyncedProducts) {
-      try {
-        await _supabase.from('products').upsert(products);
-        final nowIso = DateTime.now().toUtc().toIso8601String();
-        await db.update(
-          DatabaseService.tableProducts,
-          {DatabaseService.colLastSynced: nowIso},
-          where:
-              '${DatabaseService.colProductId} = ? AND ${DatabaseService.colShopId} = ?',
-          whereArgs: [products[DatabaseService.colProductId], currentShopId],
-        );
-      } catch (e) {
-        debugPrint("Error syncing products: $e");
-      }
-    }
-  }
-
-  Future<void> syncCuts() async {
-    final db = await _dbService.database;
-    final List<Map<String, dynamic>> unsyncedCuts = await db.query(
-      DatabaseService.tableCuts,
-      where:
-          '${DatabaseService.colLastSynced} IS NULL AND ${DatabaseService.colShopId} = ?',
-      whereArgs: [currentShopId],
-    );
-
-    if (unsyncedCuts.isEmpty) return;
-    for (var cuts in unsyncedCuts) {
-      try {
-        await _supabase.from('cuts').upsert(cuts);
-        final nowIso = DateTime.now().toUtc().toIso8601String();
-        await db.update(
-          DatabaseService.tableCuts,
-          {DatabaseService.colLastSynced: nowIso},
-          where:
-              '${DatabaseService.colCutId} = ? AND ${DatabaseService.colShopId} = ?',
-          whereArgs: [cuts[DatabaseService.colCutId], currentShopId],
-        );
-      } catch (e) {
-        debugPrint("Error syncing Cuts: $e");
-      }
-    }
-  }
-
-  Future<void> syncTimeLogs() async {
-    final db = await _dbService.database;
-    final List<Map<String, dynamic>> unsyncedTimelog = await db.query(
-      DatabaseService.tableTime,
-      where:
-          '${DatabaseService.colLastSynced} IS NULL AND ${DatabaseService.colShopId} = ?',
-      whereArgs: [currentShopId],
-    );
-
-    if (unsyncedTimelog.isEmpty) return;
-    for (var time in unsyncedTimelog) {
-      try {
-        await _supabase.from('time_logs').upsert(time);
-        final nowIso = DateTime.now().toUtc().toIso8601String();
-        await db.update(
-          DatabaseService.tableTime,
-          {DatabaseService.colLastSynced: nowIso},
-          where:
-              '${DatabaseService.colLogId} = ? AND ${DatabaseService.colShopId} = ?',
-          whereArgs: [time[DatabaseService.colLogId], currentShopId],
-        );
-      } catch (e) {
-        debugPrint("Error syncing clock logs: $e");
-      }
-    }
-  }
+  //check than connectivity_plus alone.
 
   Future<bool> isOnline() async {
-    var connectivityResult = await (Connectivity().checkConnectivity());
-    return !connectivityResult.contains(ConnectivityResult.none);
-  }
+    final connectivity = await Connectivity().checkConnectivity();
+    if (connectivity.contains(ConnectivityResult.none)) return false;
 
-  Future<bool> syncAll() async {
-    if (!await isOnline()) return false;
+    // If shop not selected we cant sync anyway.
+    if (_shopIdSafe == null) return false;
 
     try {
+      //any quick select works.
+      await _supabase.from('shops').select('id').limit(1);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Manual sync button uses this.
+  ///
+  Future<bool> syncAll() async {
+    final shopId = _shopIdSafe;
+    if (shopId == null) return false;
+
+    if (_isSyncing) return false;
+    _isSyncing = true;
+
+    try {
+      if (!await isOnline()) return false;
+
+      // Order matters
       await syncEmployees();
       await syncProducts();
       await syncCuts();
       await syncTimeLogs();
       await syncTransactions();
       await syncTillbalance();
+
       return true;
     } catch (e) {
       debugPrint("Sync failed: $e");
       return false;
+    } finally {
+      _isSyncing = false;
     }
   }
 
-  void monitorConnectivity() {
-    Connectivity().onConnectivityChanged.listen((
-      List<ConnectivityResult> results,
-    ) {
-      if (results.isNotEmpty && !results.contains(ConnectivityResult.none)) {
-        debugPrint("Connection restored: Triggering auto-sync...");
-        syncAll();
-      }
-    });
+  // ---------- Table sync methods ----------
+
+  Future<void> syncEmployees() async {
+    await _syncSimpleTable(
+      remoteTable: 'employee',
+      localTable: DatabaseService.tableEmployee,
+      idColumn: DatabaseService.colEmployeeId,
+    );
   }
+
+  Future<void> syncProducts() async {
+    await _syncSimpleTable(
+      remoteTable: 'products',
+      localTable: DatabaseService.tableProducts,
+      idColumn: DatabaseService.colProductId,
+    );
+  }
+
+  Future<void> syncCuts() async {
+    await _syncSimpleTable(
+      remoteTable: 'cuts',
+      localTable: DatabaseService.tableCuts,
+      idColumn: DatabaseService.colCutId,
+    );
+  }
+
+  Future<void> syncTimeLogs() async {
+    await _syncSimpleTable(
+      remoteTable: 'time_logs',
+      localTable: DatabaseService.tableTime,
+      idColumn: DatabaseService.colLogId,
+    );
+  }
+
+  Future<void> syncTillbalance() async {
+    await _syncSimpleTable(
+      remoteTable: 'till_balance',
+      localTable: DatabaseService.tableTillBalance,
+      idColumn: DatabaseService.colTillBalanceId,
+    );
+  }
+
+  Future<void> syncTransactions() async {
+    final shopId = _shopIdSafe;
+    if (shopId == null) return;
+
+    if (_isSyncing) return;
+    _isSyncing = true;
+
+    final db = await _dbService.database;
+
+    try {
+      if (!await isOnline()) return;
+
+      //Get unsynced headers
+      final unsyncedHeaders = await db.query(
+        DatabaseService.tableTransactions,
+        where:
+            '${DatabaseService.colLastSynced} IS NULL AND ${DatabaseService.colShopId} = ?',
+        whereArgs: [shopId],
+      );
+      if (unsyncedHeaders.isEmpty) return;
+
+      final txIds = unsyncedHeaders
+          .map((h) => h[DatabaseService.colTransactionId])
+          .whereType<String>()
+          .toList();
+
+      // Load all items for these txIds
+      final allItems = <Map<String, dynamic>>[];
+      for (final chunk in _chunks(txIds, 200)) {
+        final items = await db.query(
+          DatabaseService.tableTransactionItems,
+          where:
+              '${DatabaseService.colItemTransactionId} IN (${_placeholders(chunk.length)}) AND ${DatabaseService.colShopId} = ? AND ${DatabaseService.colLastSynced} IS NULL',
+          whereArgs: [...chunk, shopId],
+        );
+        allItems.addAll(items);
+      }
+
+      //Upload headers & items
+      await _supabase.from('transactions').upsert(unsyncedHeaders);
+      if (allItems.isNotEmpty) {
+        await _supabase.from('transaction_items').upsert(allItems);
+      }
+
+      //Mark synced ATOMICALLY
+      final nowIso = DateTime.now().toUtc().toIso8601String();
+      await db.transaction((txn) async {
+        // Mark all headers synced
+        for (final chunk in _chunks(txIds, 200)) {
+          await txn.update(
+            DatabaseService.tableTransactions,
+            {DatabaseService.colLastSynced: nowIso},
+            where:
+                '${DatabaseService.colTransactionId} IN (${_placeholders(chunk.length)}) AND ${DatabaseService.colShopId} = ?',
+            whereArgs: [...chunk, shopId],
+          );
+        }
+
+        // Mark all items synced for those txIds
+        if (allItems.isNotEmpty) {
+          for (final chunk in _chunks(txIds, 200)) {
+            await txn.update(
+              DatabaseService.tableTransactionItems,
+              {DatabaseService.colLastSynced: nowIso},
+              where:
+                  '${DatabaseService.colItemTransactionId} IN (${_placeholders(chunk.length)}) AND ${DatabaseService.colShopId} = ?',
+              whereArgs: [...chunk, shopId],
+            );
+          }
+        }
+      });
+    } on AuthException catch (e) {
+      debugPrint("Auth error syncing transactions: ${e.message}");
+      rethrow;
+    } catch (e) {
+      debugPrint("Error syncing transactions: $e");
+    } finally {
+      _isSyncing = false;
+    }
+  }
+
+  // ---------- Generic helpers ----------
+
+  Future<void> _syncSimpleTable({
+    required String remoteTable,
+    required String localTable,
+    required String idColumn,
+  }) async {
+    final shopId = _shopIdSafe;
+    if (shopId == null) return;
+
+    // Prevent collisions with other syncs
+    if (_isSyncing) return;
+    _isSyncing = true;
+
+    final db = await _dbService.database;
+
+    try {
+      if (!await isOnline()) return;
+
+      final unsyncedRows = await db.query(
+        localTable,
+        where:
+            '${DatabaseService.colLastSynced} IS NULL AND ${DatabaseService.colShopId} = ?',
+        whereArgs: [shopId],
+      );
+
+      if (unsyncedRows.isEmpty) return;
+
+      await _supabase.from(remoteTable).upsert(unsyncedRows);
+
+      final ids = unsyncedRows
+          .map((r) => r[idColumn])
+          .whereType<String>()
+          .toList();
+      final nowIso = DateTime.now().toUtc().toIso8601String();
+
+      await db.transaction((txn) async {
+        for (final chunk in _chunks(ids, 200)) {
+          await txn.update(
+            localTable,
+            {DatabaseService.colLastSynced: nowIso},
+            where:
+                '$idColumn IN (${_placeholders(chunk.length)}) AND ${DatabaseService.colShopId} = ?',
+            whereArgs: [...chunk, shopId],
+          );
+        }
+      });
+    } on AuthException catch (e) {
+      debugPrint("Auth error syncing $remoteTable: ${e.message}");
+      rethrow;
+    } catch (e) {
+      debugPrint("Error syncing $remoteTable: $e");
+    } finally {
+      _isSyncing = false;
+    }
+  }
+
+  Iterable<List<T>> _chunks<T>(List<T> input, int size) sync* {
+    for (var i = 0; i < input.length; i += size) {
+      yield input.sublist(i, i + size > input.length ? input.length : i + size);
+    }
+  }
+
+  String _placeholders(int count) => List.filled(count, '?').join(',');
 }

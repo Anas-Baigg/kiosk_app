@@ -9,7 +9,7 @@ class DownloadUIService {
   ) async {
     setSyncing(true);
 
-    final syncService = SyncService();
+    final syncService = SyncService.instance;
     final pullSerice = PullService();
 
     // 1. Check internet first

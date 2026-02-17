@@ -74,7 +74,7 @@ class TillBalanceDialog {
 
                 // Save the record
                 await DatabaseService.instance.insertTillBalance(model);
-                final syncService = SyncService();
+                final syncService = SyncService.instance;
                 syncService.syncTillbalance();
                 Navigator.pop(context, true);
               },

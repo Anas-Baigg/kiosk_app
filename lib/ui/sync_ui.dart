@@ -8,7 +8,7 @@ class SyncUIService {
   ) async {
     setSyncing(true);
 
-    final syncService = SyncService();
+    final syncService = SyncService.instance;
 
     // 1. Check internet first
     if (!await syncService.isOnline()) {
