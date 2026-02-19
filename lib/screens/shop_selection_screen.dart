@@ -85,7 +85,7 @@ class _ShopSelectionScreenState extends State<ShopSelectionScreen> {
       await _supabase.from('shops').insert({
         'name': name,
         'owner_id': user.id,
-        'admin_password': hashedPin,
+        'admin_password_hash': hashedPin,
       });
 
       _shopNameController.clear();

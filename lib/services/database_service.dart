@@ -602,7 +602,6 @@ class DatabaseService {
   Future<void> purgeOldHistory({int keepDays = 30}) async {
     final db = await database;
 
-    // Use "start of day" so retention behaves like "keep last N calendar days"
     final nowLocal = DateTime.now();
     final startOfTodayLocal = DateTime(
       nowLocal.year,
@@ -611,47 +610,61 @@ class DatabaseService {
     );
     final cutoffLocal = startOfTodayLocal.subtract(Duration(days: keepDays));
 
-    // For tables storing UTC ISO timestamps (created_at, clock_in_time)
     final cutoffIsoUtc = cutoffLocal.toUtc().toIso8601String();
-
-    // For till_balance which stores yyyy-MM-dd as TEXT
     final cutoffDateStr = DateFormat('yyyy-MM-dd').format(cutoffLocal);
 
     await db.transaction((txn) async {
-      // 1) Delete transaction_items that belong to old transactions
-      // (Delete children first to satisfy FK constraints)
+      //Delete transaction_items for old synced transactions only
       await txn.delete(
         tableTransactionItems,
         where:
             '''
         $colShopId = ?
+        AND $colLastSynced IS NOT NULL
         AND $colItemTransactionId IN (
           SELECT $colTransactionId
           FROM $tableTransactions
-          WHERE $colShopId = ? AND $colCreatedAt < ?
+          WHERE $colShopId = ?
+            AND $colCreatedAt < ?
+            AND $colLastSynced IS NOT NULL
         )
       ''',
         whereArgs: [currentShopId, currentShopId, cutoffIsoUtc],
       );
 
-      // 2) Delete old transactions (headers)
+      //Delete old synced transactions
       await txn.delete(
         tableTransactions,
-        where: '$colShopId = ? AND $colCreatedAt < ?',
+        where:
+            '''
+        $colShopId = ?
+        AND $colCreatedAt < ?
+        AND $colLastSynced IS NOT NULL
+      ''',
         whereArgs: [currentShopId, cutoffIsoUtc],
       );
 
-      // 3) Delete old time logs
+      //Delete old synced time logs
       await txn.delete(
         tableTime,
-        where: '$colShopId = ? AND $clockin < ?',
+        where:
+            '''
+        $colShopId = ?
+        AND $clockin < ?
+        AND $colLastSynced IS NOT NULL
+      ''',
         whereArgs: [currentShopId, cutoffIsoUtc],
       );
 
-      // 4) Delete old till balance rows (yyyy-MM-dd TEXT comparison works)
+      //Delete old synced till balance rows
       await txn.delete(
         tableTillBalance,
-        where: '$colShopId = ? AND $colTillDate < ?',
+        where:
+            '''
+        $colShopId = ?
+        AND $colTillDate < ?
+        AND $colLastSynced IS NOT NULL
+      ''',
         whereArgs: [currentShopId, cutoffDateStr],
       );
     });

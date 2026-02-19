@@ -17,7 +17,7 @@ class SyncService {
 
   bool _isSyncing = false;
 
-  // Debounce connectivity-triggered sync storms
+  // Debounce connectivity-triggered sync
   Timer? _debounceTimer;
 
   // ---------- Safe getters / guards ----------
@@ -30,7 +30,7 @@ class SyncService {
 
   // ---------- Public API ----------
 
-  /// Call once (ideally after Supabase init). Safe to call multiple times.
+  /// Call once ideally after Supabase init Safe to call multiple times.
   void initConnectivityMonitoring() {
     _connectivitySub ??= Connectivity().onConnectivityChanged.listen((results) {
       final hasNetwork =
@@ -75,7 +75,6 @@ class SyncService {
   }
 
   /// Manual sync button uses this.
-  ///
   Future<bool> syncAll() async {
     final shopId = _shopIdSafe;
     if (shopId == null) return false;
