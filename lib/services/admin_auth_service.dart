@@ -12,6 +12,7 @@ class AdminAuthService {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        scrollable: true,
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         title: const Text(

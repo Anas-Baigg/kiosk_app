@@ -24,6 +24,7 @@ class ClockDialog {
           builder: (context, setState) {
             return AlertDialog(
               backgroundColor: Colors.white,
+              scrollable: true,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -197,7 +198,7 @@ class ClockDialog {
         );
       },
     );
-    passController.dispose();
+
     return result;
   }
 }

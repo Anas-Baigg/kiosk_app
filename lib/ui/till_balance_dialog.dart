@@ -34,6 +34,7 @@ class TillBalanceDialog {
       barrierDismissible: false,
       builder: (_) {
         return AlertDialog(
+          scrollable: true,
           title: const Text("Enter Opening Till Balance"),
           content: TextField(
             controller: controller,
