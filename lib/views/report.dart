@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:kiosk_app/components/dailyfinance.dart';
-import 'package:kiosk_app/components/till_balance.dart';
-import 'package:kiosk_app/components/time_log_entry.dart';
-import 'package:kiosk_app/components/transactionModel.dart';
-import 'package:kiosk_app/services/database_service.dart';
+import 'package:kiosk_app/models/daily_finance.dart';
+import 'package:kiosk_app/models/till_balance.dart';
+import 'package:kiosk_app/models/time_log_display.dart';
+import 'package:kiosk_app/models/transaction_model.dart';
+import 'package:kiosk_app/services/database/database_service.dart';
+import 'package:kiosk_app/services/database/repositories/time_log_repository.dart';
+import 'package:kiosk_app/services/database/repositories/till_balance_repository.dart';
+import 'package:kiosk_app/services/database/repositories/transaction_repository.dart';
 import 'package:kiosk_app/services/download_service.dart';
-import 'package:kiosk_app/ui/date_range_picker.dart';
-import 'package:kiosk_app/ui/financial_report_card.dart';
-import 'package:kiosk_app/ui/gradient_scaffold.dart';
-import 'package:kiosk_app/ui/time_logs.dart';
-import 'package:kiosk_app/ui/transaction_list_widget.dart';
+import 'package:kiosk_app/widgets/date_range_picker.dart';
+import 'package:kiosk_app/widgets/financial_report_card.dart';
+import 'package:kiosk_app/widgets/gradient_scaffold.dart';
+import 'package:kiosk_app/widgets/time_logs.dart';
+import 'package:kiosk_app/widgets/transaction_list_widget.dart';
 
 class ReportsPage extends StatefulWidget {
   const ReportsPage({super.key});
@@ -22,9 +25,11 @@ class ReportsPage extends StatefulWidget {
 class _ReportsPageState extends State<ReportsPage> {
   final TextEditingController _dateControllerFrom = TextEditingController();
   final TextEditingController _dateControllerTo = TextEditingController();
-  final database = DatabaseService.instance;
+  final _txRepo = TransactionRepository(DatabaseService.instance);
+  final _timeLogRepo = TimeLogRepository(DatabaseService.instance);
+  final _tillRepo = TillBalanceRepository(DatabaseService.instance);
   late Future<List<TransactionHeader>> _transactions;
-  late Future<List<TimeLogEntry>> _timeLogs;
+  late Future<List<TimeLogDisplay>> _timeLogs;
   late Future<List<TillBalance>> _tillbalance;
   List<DailyFinance> _dailyFinance = [];
 
@@ -162,31 +167,6 @@ class _ReportsPageState extends State<ReportsPage> {
     );
   }
 
-  void _buildSummary(List<TransactionHeader> txs) {
-    final totalTransactions = txs.length;
-    double totalCash = 0;
-    double totalCard = 0;
-    final Map<String, double> tipsPerEmployee = {};
-
-    for (final tx in txs) {
-      if (tx.paymentMethod.toUpperCase() == 'CASH') {
-        totalCash += tx.finalTotal;
-      } else if (tx.paymentMethod.toUpperCase() == 'CARD') {
-        totalCard += tx.finalTotal;
-      }
-      final name = tx.employeeName ?? 'Unknown';
-
-      tipsPerEmployee[name] = (tipsPerEmployee[name] ?? 0) + tx.tip;
-    }
-
-    setState(() {
-      _totalTransactions = totalTransactions;
-      _totalCash = totalCash;
-      _totalCard = totalCard;
-      _tipsPerEmployee = tipsPerEmployee;
-    });
-  }
-
   Future<void> _runSearch() async {
     if (_pickedFrom == null || _pickedTo == null) {
       setState(() {
@@ -205,45 +185,63 @@ class _ReportsPageState extends State<ReportsPage> {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
-      _timeLogs = database.getTimeLogsBetweenDates(
+      _timeLogs = _timeLogRepo.getTimeLogsBetweenDates(
         from: _pickedFrom!,
         to: _pickedTo!,
       );
-      _transactions = database.getTransactionsBetweenDates(
+      _transactions = _txRepo.getTransactionsBetweenDates(
         from: _pickedFrom!,
         to: _pickedTo!,
       );
-      _tillbalance = database.getBalanceBetweenDates(
+      _tillbalance = _tillRepo.getBalanceBetweenDates(
         from: _pickedFrom!,
         to: _pickedTo!,
       );
     });
 
+    int totalTransactions = 0;
+    double totalCash = 0;
+    double totalCard = 0;
+    Map<String, double> tipsPerEmployee = {};
+    List<DailyFinance> dailyFinance = [];
+    String? error;
+
     try {
       final txs = await _transactions;
       final tillBalances = await _tillbalance;
+      await _timeLogs;
 
-      _buildSummary(txs);
+      totalTransactions = txs.length;
+      for (final tx in txs) {
+        if (tx.paymentMethod.toUpperCase() == 'CASH') {
+          totalCash += tx.finalTotal;
+        } else if (tx.paymentMethod.toUpperCase() == 'CARD') {
+          totalCard += tx.finalTotal;
+        }
+        final name = tx.employeeName ?? 'Unknown';
+        tipsPerEmployee[name] = (tipsPerEmployee[name] ?? 0) + tx.tip;
+      }
 
-      //  Build daily finance
-      final dailyFinance = buildDailyFinance(
+      dailyFinance = buildDailyFinance(
         transactions: txs,
         tillBalances: tillBalances,
       );
-
-      setState(() {
-        _dailyFinance = dailyFinance;
-      });
-
-      await _timeLogs;
     } catch (e) {
-      setState(() {
-        _errorMessage = 'Failed to load data: $e';
-      });
+      error = 'Failed to load data: $e';
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = error;
+          if (error == null) {
+            _totalTransactions = totalTransactions;
+            _totalCash = totalCash;
+            _totalCard = totalCard;
+            _tipsPerEmployee = tipsPerEmployee;
+            _dailyFinance = dailyFinance;
+          }
+        });
+      }
     }
   }
 
@@ -276,63 +274,64 @@ class _ReportsPageState extends State<ReportsPage> {
   }
 
   Widget _buildWideLayout(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Row(
-        crossAxisAlignment:
-            CrossAxisAlignment.start, // Align widgets to the top
-        children: [
-          // LEFT COLUMN: Date Picker and Time Logs
-          Expanded(
-            flex: 4,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                DateRangePicker(
-                  dateControllerFrom: _dateControllerFrom,
-                  dateControllerTo: _dateControllerTo,
-                  onSelectDateFrom: _selectDateFrom,
-                  onSelectDateTo: _selectDateTo,
-                  onTodayPressed: _todayDate,
-                  onSearchPressed: _runSearch,
-                ),
-                const Divider(height: 20, thickness: 1),
-
-                Expanded(
-                  child: FinancialReportCard(
-                    totalTransactions: _totalTransactions,
-                    totalCash: _totalCash,
-                    totalCard: _totalCard,
-                    tipsPerEmployee: _tipsPerEmployee,
-                    dailyFinance: _dailyFinance,
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // LEFT COLUMN: Date Picker and Time Logs
+            Expanded(
+              flex: 4,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  DateRangePicker(
+                    dateControllerFrom: _dateControllerFrom,
+                    dateControllerTo: _dateControllerTo,
+                    onSelectDateFrom: _selectDateFrom,
+                    onSelectDateTo: _selectDateTo,
+                    onTodayPressed: _todayDate,
+                    onSearchPressed: _runSearch,
                   ),
-                ),
-              ],
-            ),
-          ),
+                  const Divider(height: 20, thickness: 1),
 
-          const SizedBox(width: 20), // Spacer between columns
-          // RIGHT COLUMN: Summary and Transactions (approx. 60% width)
-          Expanded(
-            flex: 6,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: TimeLogs(timeLogs: _timeLogs, database: database),
-                ),
-
-                const Divider(height: 20, thickness: 1),
-                Expanded(
-                  child: TransactionListWidget(
-                    transactionsFuture: _transactions,
-                    database: database,
+                  Expanded(
+                    child: FinancialReportCard(
+                      totalTransactions: _totalTransactions,
+                      totalCash: _totalCash,
+                      totalCard: _totalCard,
+                      tipsPerEmployee: _tipsPerEmployee,
+                      dailyFinance: _dailyFinance,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+
+            const SizedBox(width: 20),
+            // RIGHT COLUMN: Summary and Transactions (approx. 60% width)
+            Expanded(
+              flex: 6,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: TimeLogs(timeLogs: _timeLogs),
+                  ),
+
+                  const Divider(height: 20, thickness: 1),
+                  Expanded(
+                    child: TransactionListWidget(
+                      transactionsFuture: _transactions,
+                      database: _txRepo,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -341,45 +340,47 @@ class _ReportsPageState extends State<ReportsPage> {
   Widget _buildNarrowLayout(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          DateRangePicker(
-            dateControllerFrom: _dateControllerFrom,
-            dateControllerTo: _dateControllerTo,
-            onSelectDateFrom: _selectDateFrom,
-            onSelectDateTo: _selectDateTo,
-            onTodayPressed: _todayDate,
-            onSearchPressed: _runSearch,
-          ),
-
-          const Divider(),
-
-          FinancialReportCard(
-            totalTransactions: _totalTransactions,
-            totalCash: _totalCash,
-            totalCard: _totalCard,
-            tipsPerEmployee: _tipsPerEmployee,
-            dailyFinance: _dailyFinance,
-          ),
-          const Divider(),
-          SizedBox(
-            height: screenHeight * 0.30,
-            child: TimeLogs(timeLogs: _timeLogs, database: database),
-          ),
-
-          const Divider(),
-
-          SizedBox(
-            height: screenHeight * 0.40,
-            child: TransactionListWidget(
-              transactionsFuture: _transactions,
-              database: database,
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            DateRangePicker(
+              dateControllerFrom: _dateControllerFrom,
+              dateControllerTo: _dateControllerTo,
+              onSelectDateFrom: _selectDateFrom,
+              onSelectDateTo: _selectDateTo,
+              onTodayPressed: _todayDate,
+              onSearchPressed: _runSearch,
             ),
-          ),
-        ],
+
+            const Divider(),
+
+            FinancialReportCard(
+              totalTransactions: _totalTransactions,
+              totalCash: _totalCash,
+              totalCard: _totalCard,
+              tipsPerEmployee: _tipsPerEmployee,
+              dailyFinance: _dailyFinance,
+            ),
+            const Divider(),
+            SizedBox(
+              height: screenHeight * 0.30,
+              child: TimeLogs(timeLogs: _timeLogs),
+            ),
+
+            const Divider(),
+
+            SizedBox(
+              height: screenHeight * 0.40,
+              child: TransactionListWidget(
+                transactionsFuture: _transactions,
+                database: _txRepo,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

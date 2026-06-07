@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:kiosk_app/screens/app_state.dart';
+import 'package:kiosk_app/utils/app_constants.dart';
+import 'package:kiosk_app/utils/app_theme.dart';
 import 'package:kiosk_app/screens/auth_screen.dart';
 import 'package:kiosk_app/screens/shop_selection_screen.dart';
 import 'package:kiosk_app/screens/shop_storage.dart';
@@ -25,6 +27,11 @@ final supabase = Supabase.instance.client;
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
+
+  // Cached so repeated auth state events (silent token refresh) don't re-read
+  // SharedPreferences. Reset to null on logout so the next login gets fresh data.
+  static Future<void>? _loadFuture;
+
   Future<void> _loadShopIntoMemory() async {
     AppState.shopId = await ShopStorage.getShopId();
     AppState.shopName = await ShopStorage.getShopName();
@@ -34,28 +41,9 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Crazy Cutz',
+      title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        // White/light base
-        scaffoldBackgroundColor: Colors.black,
-        //a consistent palette from your brand color
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color.fromRGBO(55, 63, 81, 1.0),
-        ),
-        appBarTheme: const AppBarTheme(
-          centerTitle: true,
-          elevation: 9,
-          titleTextStyle: TextStyle(
-            fontSize: 26,
-            fontWeight: FontWeight.bold,
-            fontStyle: FontStyle.italic,
-            fontFamily: "RobotoMono",
-            color: Colors.white,
-          ),
-        ),
-      ),
+      theme: AppTheme.theme,
       home: StreamBuilder<AuthState>(
         stream: Supabase.instance.client.auth.onAuthStateChange,
         builder: (context, snapshot) {
@@ -63,10 +51,11 @@ class MyApp extends StatelessWidget {
           final session = snapshot.data?.session;
 
           if (session == null) {
+            MyApp._loadFuture = null; // Reset so next login re-reads SharedPreferences
             return const AuthScreen();
           }
           return FutureBuilder<void>(
-            future: _loadShopIntoMemory(),
+            future: MyApp._loadFuture ??= _loadShopIntoMemory(),
             builder: (context, shopSnap) {
               if (shopSnap.connectionState == ConnectionState.waiting) {
                 return const Scaffold(

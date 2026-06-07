@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../services/database_service.dart';
-import '../ui/employee_dropdown.dart';
-import '../ui/gradient_scaffold.dart';
+import 'package:kiosk_app/services/database/database_service.dart';
+import 'package:kiosk_app/services/database/repositories/employee_repository.dart';
+import 'package:kiosk_app/widgets/employee_dropdown.dart';
+import 'package:kiosk_app/widgets/gradient_scaffold.dart';
 
 class CheckTip extends StatefulWidget {
   const CheckTip({super.key});
@@ -13,7 +14,7 @@ class CheckTip extends StatefulWidget {
 
 class _CheckTipState extends State<CheckTip> {
   late Future<List<Map<String, dynamic>>> _activeEmployeesFuture;
-  final database = DatabaseService.instance;
+  final _empRepo = EmployeeRepository(DatabaseService.instance);
 
   String? _selectedEmployeeId;
   final TextEditingController _passcodeController = TextEditingController();
@@ -36,7 +37,7 @@ class _CheckTipState extends State<CheckTip> {
   }
 
   void _load() {
-    _activeEmployeesFuture = database.getAllActiveEmployees();
+    _activeEmployeesFuture = _empRepo.getAllActiveEmployees();
   }
 
   Future<void> _pickDate(BuildContext context) async {
@@ -75,7 +76,7 @@ class _CheckTipState extends State<CheckTip> {
     setState(() => _isLoading = true);
 
     try {
-      final validEmployeeId = await database.getEmployeeIdByPasscode(
+      final validEmployeeId = await _empRepo.getEmployeeIdByPasscode(
         _passcodeController.text,
       );
 
@@ -87,7 +88,7 @@ class _CheckTipState extends State<CheckTip> {
         return;
       }
 
-      final results = await database.getEmployeeTipsForDate(
+      final results = await _empRepo.getEmployeeTipsForDate(
         _selectedEmployeeId!,
         _selectedDate,
       );

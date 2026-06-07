@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:kiosk_app/screens/app_state.dart';
 import 'package:kiosk_app/services/download_service.dart';
-import 'package:kiosk_app/ui/management_list_page.dart';
+import 'package:kiosk_app/widgets/management_list_page.dart';
 import 'package:uuid/uuid.dart';
-import 'package:kiosk_app/components/employees.dart';
-import 'package:kiosk_app/services/employee_validators.dart';
+import 'package:kiosk_app/models/employees.dart';
+import 'package:kiosk_app/utils/validators/employee_validators.dart';
 import 'package:kiosk_app/services/database_service.dart';
 
 class AddWorker extends StatelessWidget {

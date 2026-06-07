@@ -1,11 +1,13 @@
-class TimeLogEntry {
+/// Display DTO for clock-in/out history. Constructed from a JOIN query
+/// that includes the employee name. Not written to SQLite directly.
+class TimeLogDisplay {
   final String id;
   final String employeeId;
   final String employeeName;
   final DateTime clockIn;
   final DateTime? clockOut;
 
-  TimeLogEntry({
+  TimeLogDisplay({
     required this.id,
     required this.employeeId,
     required this.employeeName,
@@ -13,8 +15,8 @@ class TimeLogEntry {
     required this.clockOut,
   });
 
-  factory TimeLogEntry.fromMap(Map<String, dynamic> map) {
-    return TimeLogEntry(
+  factory TimeLogDisplay.fromMap(Map<String, dynamic> map) {
+    return TimeLogDisplay(
       id: map['log_id'] as String,
       employeeId: map['employee_id'] as String,
       employeeName: map['employee_name'] as String,

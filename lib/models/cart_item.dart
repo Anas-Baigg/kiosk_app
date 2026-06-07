@@ -1,5 +1,3 @@
-// ignore_for_file: file_names
-
 class CartItem {
   final String idKey;
   final String name;
@@ -14,4 +12,7 @@ class CartItem {
   });
 
   double get subtotal => unitPrice * quantity;
+
+  void increment() => quantity++;
+  void decrement() => quantity = (quantity - 1).clamp(1, 999);
 }

@@ -13,7 +13,6 @@ class MaintenanceUIService {
     final syncService = SyncService.instance;
     final pullService = PullService();
 
-    //Internet check once
     if (!await syncService.isOnline()) {
       setSyncing(false);
       if (!context.mounted) return;
@@ -29,7 +28,6 @@ class MaintenanceUIService {
     bool pullOk = false;
 
     try {
-      //sync local unsynced changes to cloud
       syncOk = await syncService.syncAll();
       if (!context.mounted) return;
 
@@ -39,10 +37,9 @@ class MaintenanceUIService {
           "Cloud sync failed.\n\nYour data is still safe locally. Please try again when the connection is stable.",
           title: "Sync Failed",
         );
-        return; //stop here don't pull when push failed
+        return;
       }
 
-      //download latest cloud data into local
       pullOk = await pullService.fullDownloadFromCloud(
         historyDays: historyDays,
       );
@@ -51,7 +48,6 @@ class MaintenanceUIService {
       if (pullOk) {
         _showSuccessDialog(context);
       } else {
-        // Partial success: push succeeded, pull failed
         _showPartialDialog(
           context,
           title: "Uploaded, but Download Failed",
@@ -62,7 +58,6 @@ class MaintenanceUIService {
     } catch (e) {
       if (!context.mounted) return;
 
-      // If sync already succeeded, show partial info instead of generic failure
       if (syncOk && !pullOk) {
         _showPartialDialog(
           context,
@@ -86,11 +81,7 @@ class MaintenanceUIService {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.check_circle_outline,
-              color: Colors.green,
-              size: 80,
-            ),
+            const Icon(Icons.check_circle_outline, color: Colors.green, size: 80),
             const SizedBox(height: 16),
             const Text(
               "Maintenance Complete",

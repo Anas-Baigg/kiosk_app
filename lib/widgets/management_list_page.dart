@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:kiosk_app/services/database_service.dart';
 import 'package:kiosk_app/services/sync_service.dart';
-import 'package:kiosk_app/ui/gradient_scaffold.dart';
+import 'package:kiosk_app/widgets/gradient_scaffold.dart';
 
 /// Holds all the specific configuration for the generic page.
 /// This tells the page *what* to build and *how* to handle the data.
@@ -190,19 +190,13 @@ class _GenericManagementPageState<T> extends State<GenericManagementPage<T>> {
             children: [
               TextField(
                 controller: f1UpdateController,
-                decoration: InputDecoration(
-                  labelText: config.field1Label,
-                  border: const OutlineInputBorder(),
-                ),
+                decoration: InputDecoration(labelText: config.field1Label),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: f2UpdateController,
                 keyboardType: config.field2KeyboardType,
-                decoration: InputDecoration(
-                  labelText: config.field2Label,
-                  border: const OutlineInputBorder(),
-                ),
+                decoration: InputDecoration(labelText: config.field2Label),
               ),
             ],
           ),
@@ -254,9 +248,32 @@ class _GenericManagementPageState<T> extends State<GenericManagementPage<T>> {
     );
   }
 
-  Future<void> _deleteItem(T item, int index) async {
+  Future<void> _confirmDelete(T item) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Delete ${config.itemName}'),
+        content: Text(
+          'Are you sure you want to delete "${config.getName(item)}"? This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFF55045),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
     final itemId = config.getId(item);
-
     await databs.deactivateEPC(
       table: config.tableName,
       idColumn: config.idColumn,
@@ -264,7 +281,7 @@ class _GenericManagementPageState<T> extends State<GenericManagementPage<T>> {
     );
     _triggerSync();
     await _loadItems();
-    _showSnackBar('${config.itemName} Deleted');
+    _showSnackBar('${config.itemName} deleted');
   }
 
   @override
@@ -322,7 +339,6 @@ class _GenericManagementPageState<T> extends State<GenericManagementPage<T>> {
                                     controller: _field1Controller,
                                     decoration: InputDecoration(
                                       label: Text(config.field1Label),
-                                      border: const OutlineInputBorder(),
                                     ),
                                   ),
                                   const SizedBox(height: 16),
@@ -331,7 +347,6 @@ class _GenericManagementPageState<T> extends State<GenericManagementPage<T>> {
                                     controller: _field2Controller,
                                     decoration: InputDecoration(
                                       label: Text(config.field2Label),
-                                      border: const OutlineInputBorder(),
                                     ),
                                   ),
                                   const SizedBox(height: 16),
@@ -374,7 +389,6 @@ class _GenericManagementPageState<T> extends State<GenericManagementPage<T>> {
                                 controller: _field1Controller,
                                 decoration: InputDecoration(
                                   label: Text(config.field1Label),
-                                  border: const OutlineInputBorder(),
                                 ),
                               ),
                               const SizedBox(height: 16),
@@ -383,22 +397,12 @@ class _GenericManagementPageState<T> extends State<GenericManagementPage<T>> {
                                 controller: _field2Controller,
                                 decoration: InputDecoration(
                                   label: Text(config.field2Label),
-                                  border: const OutlineInputBorder(),
                                 ),
                               ),
                               const SizedBox(height: 16),
                               ElevatedButton(
                                 onPressed: _addItem,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF101418),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                ),
-                                child: const Text(
-                                  "Save",
-                                  style: TextStyle(color: Colors.white),
-                                ),
+                                child: const Text("Save"),
                               ),
                             ],
                           ),
@@ -441,7 +445,7 @@ class _GenericManagementPageState<T> extends State<GenericManagementPage<T>> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
-          clipBehavior: Clip.antiAlias, // <-- keep slidable inside rounded card
+          clipBehavior: Clip.antiAlias,
           child: SlidableAutoCloseBehavior(
             closeWhenOpened: true,
             child: Slidable(
@@ -463,7 +467,7 @@ class _GenericManagementPageState<T> extends State<GenericManagementPage<T>> {
                     backgroundColor: const Color(0xFFF55045),
                     icon: Icons.delete,
                     label: "Delete",
-                    onPressed: (context) => _deleteItem(item, i),
+                    onPressed: (context) => _confirmDelete(item),
                   ),
                 ],
               ),

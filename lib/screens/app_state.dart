@@ -10,4 +10,9 @@ class AppState {
     }
     return id;
   }
+
+  static String? get shopIdOrNull {
+    final id = shopId;
+    return (id == null || id.isEmpty) ? null : id;
+  }
 }

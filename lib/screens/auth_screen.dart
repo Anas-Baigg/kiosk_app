@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:kiosk_app/ui/gradient_scaffold.dart';
+import 'package:kiosk_app/widgets/gradient_scaffold.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:kiosk_app/services/auth_validators.dart';
+import 'package:kiosk_app/utils/validators/auth_validators.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -135,16 +135,9 @@ class _AuthScreenState extends State<AuthScreen> {
                                 autovalidateMode:
                                     AutovalidateMode.onUserInteraction,
                                 validator: Validators.email,
-                                decoration: InputDecoration(
+                                decoration: const InputDecoration(
                                   labelText: 'Email',
-                                  prefixIcon: const Icon(Icons.email_outlined),
-                                  filled: true,
-                                  fillColor: Colors.white.withValues(
-                                    alpha: isWide ? 1 : 0.85,
-                                  ),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
+                                  prefixIcon: Icon(Icons.email_outlined),
                                 ),
                               ),
                               const SizedBox(height: 14),
@@ -162,13 +155,6 @@ class _AuthScreenState extends State<AuthScreen> {
                                 decoration: InputDecoration(
                                   labelText: 'Password',
                                   prefixIcon: const Icon(Icons.lock_outline),
-                                  filled: true,
-                                  fillColor: Colors.white.withValues(
-                                    alpha: 0.85,
-                                  ),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
                                   suffixIcon: IconButton(
                                     tooltip: _obscurePassword
                                         ? 'Show password'
@@ -203,13 +189,6 @@ class _AuthScreenState extends State<AuthScreen> {
                                         ),
                                         label: Text(
                                           _isSignUp ? 'Register' : 'Login',
-                                        ),
-                                        style: ElevatedButton.styleFrom(
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              12,
-                                            ),
-                                          ),
                                         ),
                                       ),
                               ),

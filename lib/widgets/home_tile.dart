@@ -23,12 +23,11 @@ class HomeTileButton extends StatelessWidget {
   static const _labelStyle = TextStyle(
     fontSize: 18,
     fontWeight: FontWeight.bold,
-    fontStyle: FontStyle.normal,
     fontFamily: "RobotoMono",
-    color: Color.fromARGB(255, 55, 63, 81),
+    color: Color(0xFF37393F),
   );
 
-  static const _iconColor = Color.fromARGB(255, 55, 63, 81);
+  static const _iconColor = Color(0xFF37393F);
 
   @override
   Widget build(BuildContext context) {
@@ -42,14 +41,19 @@ class HomeTileButton extends StatelessWidget {
           const EdgeInsets.symmetric(vertical: 20, horizontal: 10),
         ),
       ),
-      child:
-          child ??
+      child: child ??
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(icon!, color: _iconColor, size: 22),
               const SizedBox(width: 10),
-              Text(label!, style: _labelStyle),
+              Flexible(
+                child: Text(
+                  label!,
+                  style: _labelStyle,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
     );

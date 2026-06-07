@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:kiosk_app/components/time_log_entry.dart';
-import 'package:kiosk_app/services/database_service.dart';
+import 'package:kiosk_app/models/time_log_display.dart';
 
 class TimeLogs extends StatelessWidget {
-  final DatabaseService database;
-  final Future<List<TimeLogEntry>> timeLogs;
-  const TimeLogs({super.key, required this.timeLogs, required this.database});
+  final Future<List<TimeLogDisplay>> timeLogs;
+  const TimeLogs({super.key, required this.timeLogs});
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<TimeLogEntry>>(
+    return FutureBuilder<List<TimeLogDisplay>>(
       future: timeLogs,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -46,24 +44,20 @@ class TimeLogs extends StatelessWidget {
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
             ),
-
             Flexible(
               fit: FlexFit.loose,
-              child: ListView(
-                children: logs.map((log) {
-                  final inTime = DateFormat(
-                    'yyyy-MM-dd HH:mm',
-                  ).format(log.clockIn);
+              child: ListView.builder(
+                itemCount: logs.length,
+                itemBuilder: (context, index) {
+                  final log = logs[index];
+                  final inTime = DateFormat('yyyy-MM-dd HH:mm').format(log.clockIn);
                   final outTime = log.clockOut != null
                       ? DateFormat('yyyy-MM-dd HH:mm').format(log.clockOut!)
                       : 'Still working';
 
                   return Card(
                     elevation: 4,
-                    margin: const EdgeInsets.symmetric(
-                      vertical: 8.0,
-                      horizontal: 8.0,
-                    ),
+                    margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -72,7 +66,7 @@ class TimeLogs extends StatelessWidget {
                       subtitle: Text('IN: $inTime\nOUT: $outTime'),
                     ),
                   );
-                }).toList(),
+                },
               ),
             ),
           ],

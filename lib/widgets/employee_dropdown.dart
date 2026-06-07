@@ -2,11 +2,8 @@ import 'package:flutter/material.dart';
 
 class EmployeeDropdown extends StatelessWidget {
   final Future<List<Map<String, dynamic>>> activeEmployeesFuture;
-
   final String? selectedEmployeeId;
-
   final ValueChanged<String?> onChanged;
-
   final VoidCallback onRefresh;
 
   const EmployeeDropdown({
@@ -70,19 +67,14 @@ class EmployeeDropdown extends StatelessWidget {
 
         return Center(
           child: Container(
-            constraints: const BoxConstraints(
-              maxWidth: 700,
-            ), // Limits the whole form width
+            constraints: const BoxConstraints(maxWidth: 700),
             child: Column(
               children: [
                 DropdownButtonFormField<String>(
                   value: selectedEmployeeId,
-
                   decoration: const InputDecoration(
                     labelText: 'Active Employee',
-                    border: OutlineInputBorder(),
                   ),
-
                   items: rows
                       .map(
                         (m) => DropdownMenuItem<String>(

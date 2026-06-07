@@ -18,11 +18,11 @@ class TimeLog {
   });
 
   Map<String, dynamic> toMap() => {
-    DatabaseService.colLogId: id,
-    DatabaseService.logEmp: employeeId,
-    DatabaseService.clockin: clockIn.toUtc().toIso8601String(),
-    DatabaseService.clockout: clockOut?.toUtc().toIso8601String(),
-    DatabaseService.colShopId: shopId,
-    DatabaseService.colLastSynced: lastSyncedAt?.toUtc().toIso8601String(),
-  };
+        DatabaseService.colLogId: id,
+        DatabaseService.logEmp: employeeId,
+        DatabaseService.clockin: clockIn.toUtc().toIso8601String(),
+        DatabaseService.clockout: clockOut?.toUtc().toIso8601String(),
+        DatabaseService.colShopId: shopId,
+        DatabaseService.colLastSynced: lastSyncedAt?.toUtc().toIso8601String(),
+      };
 }

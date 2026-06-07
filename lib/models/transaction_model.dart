@@ -1,5 +1,3 @@
-// ignore_for_file: file_names
-
 import 'package:kiosk_app/services/database_service.dart';
 
 class TransactionHeader {

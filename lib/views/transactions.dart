@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:kiosk_app/components/cart_Item.dart';
-import 'package:kiosk_app/components/cuts.dart';
-import 'package:kiosk_app/components/products.dart';
-import 'package:kiosk_app/components/transaction_item.dart';
-import 'package:kiosk_app/components/transactionModel.dart';
+import 'package:kiosk_app/models/cart_item.dart';
+import 'package:kiosk_app/models/cuts.dart';
+import 'package:kiosk_app/models/products.dart';
+import 'package:kiosk_app/models/transaction_item.dart';
+import 'package:kiosk_app/models/transaction_model.dart';
 import 'package:kiosk_app/screens/app_state.dart';
+import 'package:kiosk_app/services/database/database_service.dart';
+import 'package:kiosk_app/services/database/repositories/time_log_repository.dart';
+import 'package:kiosk_app/services/database/repositories/transaction_repository.dart';
 import 'package:kiosk_app/services/sync_service.dart';
-import 'package:kiosk_app/ui/employee_dropdown.dart';
-import 'package:kiosk_app/ui/gradient_scaffold.dart';
-import 'package:kiosk_app/ui/payment_summary.dart';
-import 'package:kiosk_app/ui/product_list.dart';
-import 'package:kiosk_app/ui/service_list.dart';
-import 'package:kiosk_app/ui/till_balance_dialog.dart';
-import '../services/database_service.dart';
+import 'package:kiosk_app/widgets/employee_dropdown.dart';
+import 'package:kiosk_app/widgets/gradient_scaffold.dart';
+import 'package:kiosk_app/widgets/payment_summary.dart';
+import 'package:kiosk_app/widgets/product_list.dart';
+import 'package:kiosk_app/widgets/service_list.dart';
+import 'package:kiosk_app/widgets/till_balance_dialog.dart';
 
 class Transactions extends StatefulWidget {
   const Transactions({super.key});
@@ -24,14 +26,16 @@ class Transactions extends StatefulWidget {
 class _TransactionsState extends State<Transactions> {
   final TextEditingController _tipController = TextEditingController();
   final TextEditingController _discountController = TextEditingController();
-  final database = DatabaseService.instance;
+  final _db = DatabaseService.instance;
+  final _timeLogRepo = TimeLogRepository(DatabaseService.instance);
+  final _txRepo = TransactionRepository(DatabaseService.instance);
   late Future<List<Map<String, dynamic>>> _activeEmployeesFuture;
   late Future<List<Cuts>> cuttings;
   late Future<List<Product>> products;
   String get currentShopId => AppState.requireShopId();
 
   String? _selectedEmployeeId;
-  Map<String, CartItem> _cartItems = {};
+  late final ValueNotifier<Map<String, CartItem>> _cartNotifier;
 
   double tip = 0;
   double discount = 0;
@@ -39,12 +43,14 @@ class _TransactionsState extends State<Transactions> {
   void dispose() {
     _tipController.dispose();
     _discountController.dispose();
+    _cartNotifier.dispose();
     super.dispose();
   }
 
   @override
   void initState() {
     super.initState();
+    _cartNotifier = ValueNotifier({});
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkBalance();
@@ -65,54 +71,48 @@ class _TransactionsState extends State<Transactions> {
   }
 
   void _loadData() {
-    cuttings = database.getEPC(
+    cuttings = _db.getEPC(
       table: DatabaseService.tableCuts,
       fromMap: Cuts.fromMap,
     );
 
-    products = database.getEPC(
+    products = _db.getEPC(
       table: DatabaseService.tableProducts,
       fromMap: Product.fromMap,
     );
   }
 
   void _increment(String idKey, String name, double price) {
-    setState(() {
-      if (_cartItems.containsKey(idKey)) {
-        _cartItems[idKey]!.quantity++;
-      } else {
-        _cartItems[idKey] = CartItem(
-          idKey: idKey,
-          name: name,
-          unitPrice: price,
-          quantity: 1,
-        );
-      }
-    });
+    final updated = Map<String, CartItem>.from(_cartNotifier.value);
+    if (updated.containsKey(idKey)) {
+      updated[idKey]!.increment();
+    } else {
+      updated[idKey] = CartItem(idKey: idKey, name: name, unitPrice: price);
+    }
+    _cartNotifier.value = updated;
   }
 
   void _decrement(String idKey) {
-    if (!_cartItems.containsKey(idKey)) return;
-
-    setState(() {
-      final item = _cartItems[idKey]!;
-      if (item.quantity > 1) {
-        item.quantity--;
-      } else {
-        _cartItems.remove(idKey);
-      }
-    });
+    if (!_cartNotifier.value.containsKey(idKey)) return;
+    final updated = Map<String, CartItem>.from(_cartNotifier.value);
+    final item = updated[idKey]!;
+    if (item.quantity > 1) {
+      item.decrement();
+    } else {
+      updated.remove(idKey);
+    }
+    _cartNotifier.value = updated;
   }
 
   void _reloadActiveEmployees() {
     setState(() {
-      _activeEmployeesFuture = database.getActiveEmployees();
+      _activeEmployeesFuture = _timeLogRepo.getActiveEmployees();
     });
   }
 
   // Get the total of all items in the cart
   double get _baseTotal {
-    return _cartItems.values.fold(0.0, (sum, item) => sum + item.subtotal);
+    return _cartNotifier.value.values.fold(0.0, (sum, item) => sum + item.subtotal);
   }
 
   // Get the final total including tip and discount
@@ -133,7 +133,7 @@ class _TransactionsState extends State<Transactions> {
       shopId: currentShopId,
     );
 
-    final itemObjects = _cartItems.values.map((cartItem) {
+    final itemObjects = _cartNotifier.value.values.map((cartItem) {
       final itemType = cartItem.idKey.split('_')[0];
       return TransactionItem(
         itemType: itemType,
@@ -144,28 +144,22 @@ class _TransactionsState extends State<Transactions> {
       );
     }).toList();
     if (mounted) Navigator.pop(context);
-    // 3. Call Database Service to Execute the Transaction
     try {
-      // You will implement this in DatabaseService next!
-      await database.saveTransactionObjects(headerObject, itemObjects);
+      await _txRepo.saveTransactionObjects(headerObject, itemObjects);
       _tipController.clear();
       _discountController.clear();
-      // 4. Reset State on Success
-
+      if (!mounted) return;
+      _cartNotifier.value = {};
       setState(() {
         _selectedEmployeeId = null;
-        _cartItems = {}; // Clear the cart
         tip = 0;
         discount = 0;
       });
-      // Show success message
-      if (mounted) {
-        final syncService = SyncService.instance;
-        syncService.syncTransactions();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Transaction saved successfully!')),
-        );
-      }
+      final syncService = SyncService.instance;
+      syncService.syncTransactions();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Transaction saved successfully!')),
+      );
     } catch (e) {
       _showErrorDialog(
         'Transaction Failed',
@@ -175,7 +169,7 @@ class _TransactionsState extends State<Transactions> {
   }
 
   void _confirm(String method) {
-    if (_selectedEmployeeId == null || _cartItems.isEmpty) {
+    if (_selectedEmployeeId == null || _cartNotifier.value.isEmpty) {
       _showErrorDialog(
         'Missing Data',
         'Please select an active employee and add at least one item to the cart before confirming the transaction.',
@@ -206,10 +200,7 @@ class _TransactionsState extends State<Transactions> {
               const Divider(),
               Text(
                 "FINAL TOTAL: €${_finalTotal.toStringAsFixed(2)}",
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 20,
-                ),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
               ),
             ],
           ),
@@ -272,71 +263,89 @@ class _TransactionsState extends State<Transactions> {
 
   Widget _buildPhoneLayout() {
     final screenHeight = MediaQuery.of(context).size.height;
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 1. EMPLOYEES
-          EmployeeDropdown(
-            activeEmployeesFuture: _activeEmployeesFuture,
-            selectedEmployeeId: _selectedEmployeeId,
-            onChanged: (val) {
-              setState(() {
-                _selectedEmployeeId = val;
-              });
-            },
-            onRefresh: _reloadActiveEmployees,
-          ),
-
-          const SizedBox(height: 20),
-
-          // 2. SERVICES
-          SizedBox(
-            height: screenHeight * 0.30,
-            child: ServiceList(
-              cutsFuture: cuttings,
-              cartItems: _cartItems,
-              onIncrement: _increment,
-              onDecrement: _decrement,
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 1. EMPLOYEES
+            EmployeeDropdown(
+              activeEmployeesFuture: _activeEmployeesFuture,
+              selectedEmployeeId: _selectedEmployeeId,
+              onChanged: (val) {
+                setState(() {
+                  _selectedEmployeeId = val;
+                });
+              },
+              onRefresh: _reloadActiveEmployees,
             ),
-          ),
 
-          const SizedBox(height: 20),
+            const SizedBox(height: 20),
 
-          // 3. PRODUCTS
-          SizedBox(
-            height: screenHeight * 0.40,
-            child: ProductList(
-              productsFuture: products,
-              cartItems: _cartItems,
-              onIncrement: _increment,
-              onDecrement: _decrement,
+            // 2. SERVICES
+            SizedBox(
+              height: screenHeight * 0.30,
+              child: ValueListenableBuilder<Map<String, CartItem>>(
+                valueListenable: _cartNotifier,
+                builder: (context, cart, _) {
+                  return ServiceList(
+                    cutsFuture: cuttings,
+                    cartItems: cart,
+                    onIncrement: _increment,
+                    onDecrement: _decrement,
+                  );
+                },
+              ),
             ),
-          ),
 
-          const SizedBox(height: 20),
+            const SizedBox(height: 20),
 
-          // 4. TIP + DISCOUNT + PAYMENT
-          PaymentSummary(
-            tipController: _tipController,
-            discountController: _discountController,
-            baseTotal: _baseTotal,
-            finalTotal: _finalTotal,
-            onTipChanged: (value) {
-              setState(() {
-                tip = double.tryParse(value) ?? 0;
-              });
-            },
-            onDiscountChanged: (value) {
-              setState(() {
-                discount = double.tryParse(value) ?? 0;
-              });
-            },
-            onConfirmCash: () => _confirm("Cash"),
-            onConfirmCard: () => _confirm("Card"),
-          ),
-        ],
+            // 3. PRODUCTS
+            SizedBox(
+              height: screenHeight * 0.40,
+              child: ValueListenableBuilder<Map<String, CartItem>>(
+                valueListenable: _cartNotifier,
+                builder: (context, cart, _) {
+                  return ProductList(
+                    productsFuture: products,
+                    cartItems: cart,
+                    onIncrement: _increment,
+                    onDecrement: _decrement,
+                  );
+                },
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // 4. TIP + DISCOUNT + PAYMENT
+            ValueListenableBuilder<Map<String, CartItem>>(
+              valueListenable: _cartNotifier,
+              builder: (context, cart, _) {
+                final base = cart.values.fold(0.0, (sum, item) => sum + item.subtotal);
+                return PaymentSummary(
+                  tipController: _tipController,
+                  discountController: _discountController,
+                  baseTotal: base,
+                  finalTotal: base + tip - discount,
+                  onTipChanged: (value) {
+                    setState(() {
+                      tip = double.tryParse(value) ?? 0;
+                    });
+                  },
+                  onDiscountChanged: (value) {
+                    setState(() {
+                      discount = double.tryParse(value) ?? 0;
+                    });
+                  },
+                  onConfirmCash: () => _confirm("Cash"),
+                  onConfirmCard: () => _confirm("Card"),
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -344,7 +353,8 @@ class _TransactionsState extends State<Transactions> {
   // 3. The Wide Screen Layout (Tablet/Horizontal)
   Widget _buildTabletLayout() {
     // Use a Row for the main split-screen layout
-    return Row(
+    return SafeArea(
+      child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // === LEFT PANE: Employee Dropdown, Services, and Products ===
@@ -370,39 +380,41 @@ class _TransactionsState extends State<Transactions> {
                 const Divider(height: 20, thickness: 1),
 
                 // 2. SERVICES AND PRODUCTS (Side-by-side in a Row)
-                SizedBox(
-                  // Use a fixed height for the scrollable list container
-                  height: MediaQuery.of(context).size.height * 0.60,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Services (takes half the space)
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.only(right: 10.0),
-                          child: ServiceList(
-                            cutsFuture: cuttings,
-                            cartItems: _cartItems,
-                            onIncrement: _increment,
-                            onDecrement: _decrement,
+                ValueListenableBuilder<Map<String, CartItem>>(
+                  valueListenable: _cartNotifier,
+                  builder: (context, cart, _) {
+                    return SizedBox(
+                      height: MediaQuery.of(context).size.height * 0.60,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: 10.0),
+                              child: ServiceList(
+                                cutsFuture: cuttings,
+                                cartItems: cart,
+                                onIncrement: _increment,
+                                onDecrement: _decrement,
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                      const VerticalDivider(width: 1, thickness: 1),
-                      // Products (takes the other half)
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.only(left: 10.0),
-                          child: ProductList(
-                            productsFuture: products,
-                            cartItems: _cartItems,
-                            onIncrement: _increment,
-                            onDecrement: _decrement,
+                          const VerticalDivider(width: 1, thickness: 1),
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(left: 10.0),
+                              child: ProductList(
+                                productsFuture: products,
+                                cartItems: cart,
+                                onIncrement: _increment,
+                                onDecrement: _decrement,
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
-                    ],
-                  ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -417,62 +429,57 @@ class _TransactionsState extends State<Transactions> {
           flex: 3, // Gives this pane 3/8 of the screen width (37.5%)
           child: Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // **Cart Summary List (NEW UI COMPONENT NEEDED)**
-                // Since you only listed the Tip/Discount/Payment section,
-                // we'll assume this area will eventually hold a dedicated list
-                // of the items in `_cartItems`. For now, let's put a placeholder
-                // or expand the PaymentSummary to include the list view.
-
-                // For a true tablet layout, you need to display what's IN the cart!
-                const Text(
-                  "Order Summary",
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 10),
-
-                // Use Expanded to make the cart list take up the available vertical space
-                Expanded(
-                  child: ListView(
-                    children: _cartItems.values.map((item) {
-                      // This uses your existing CartItem component for display
-                      return ListTile(
-                        title: Text(item.name),
-                        trailing: Text(
-                          '${item.quantity} x €${item.unitPrice.toStringAsFixed(2)}',
-                          style: TextStyle(color: Colors.black),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-
-                // Final Payment Section
-                PaymentSummary(
-                  tipController: _tipController,
-                  discountController: _discountController,
-                  baseTotal: _baseTotal,
-                  finalTotal: _finalTotal,
-                  onTipChanged: (value) {
-                    setState(() {
-                      tip = double.tryParse(value) ?? 0;
-                    });
-                  },
-                  onDiscountChanged: (value) {
-                    setState(() {
-                      discount = double.tryParse(value) ?? 0;
-                    });
-                  },
-                  onConfirmCash: () => _confirm("Cash"),
-                  onConfirmCard: () => _confirm("Card"),
-                ),
-              ],
+            child: ValueListenableBuilder<Map<String, CartItem>>(
+              valueListenable: _cartNotifier,
+              builder: (context, cart, _) {
+                final base = cart.values.fold(0.0, (sum, item) => sum + item.subtotal);
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      "Order Summary",
+                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 10),
+                    Expanded(
+                      child: ListView(
+                        children: cart.values.map((item) {
+                          return ListTile(
+                            title: Text(item.name),
+                            trailing: Text(
+                              '${item.quantity} x €${item.unitPrice.toStringAsFixed(2)}',
+                              style: const TextStyle(color: Colors.black),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                    PaymentSummary(
+                      tipController: _tipController,
+                      discountController: _discountController,
+                      baseTotal: base,
+                      finalTotal: base + tip - discount,
+                      onTipChanged: (value) {
+                        setState(() {
+                          tip = double.tryParse(value) ?? 0;
+                        });
+                      },
+                      onDiscountChanged: (value) {
+                        setState(() {
+                          discount = double.tryParse(value) ?? 0;
+                        });
+                      },
+                      onConfirmCash: () => _confirm("Cash"),
+                      onConfirmCard: () => _confirm("Card"),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         ),
       ],
+    ),
     );
   }
 }

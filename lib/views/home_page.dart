@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:kiosk_app/screens/app_state.dart';
 import 'package:kiosk_app/services/admin_auth_service.dart';
-import 'package:kiosk_app/services/home_tile.dart';
-import 'package:kiosk_app/ui/maintenance_ui.dart';
+import 'package:kiosk_app/widgets/home_tile.dart';
+import 'package:kiosk_app/widgets/maintenance_ui.dart';
 import 'package:kiosk_app/views/check_tip.dart';
 import 'package:kiosk_app/views/transactions.dart';
-import 'package:kiosk_app/ui/gradient_scaffold.dart';
+import 'package:kiosk_app/widgets/gradient_scaffold.dart';
 import 'clocks_dialogs.dart';
 
 class HomePage extends StatefulWidget {
@@ -17,7 +17,6 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   bool _isSyncing = false;
-  final shopId = AppState.shopId;
   final shopName = AppState.shopName;
 
   @override
@@ -62,55 +61,57 @@ class _HomePageState extends State<HomePage> {
       showLogout: true,
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
-        child: Padding(
-          padding: const EdgeInsets.all(10.0),
-          child: GridView.count(
-            crossAxisCount: crossAxisCount,
-            crossAxisSpacing: 10.0,
-            mainAxisSpacing: 10.0,
-            childAspectRatio: 2,
-            children: [
-              HomeTileButton(
-                icon: Icons.login,
-                label: "Clock IN",
-                onPressed: () {
-                  ClockDialog.showClocksDialog(
-                    context,
-                    ClockDialogAction.clockIn,
-                  );
-                },
-              ),
-              HomeTileButton(
-                icon: Icons.logout,
-                label: "Clock OUT",
-                onPressed: () {
-                  ClockDialog.showClocksDialog(
-                    context,
-                    ClockDialogAction.clockOut,
-                  );
-                },
-              ),
-              HomeTileButton(
-                icon: Icons.cut_sharp,
-                label: "Transactions",
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => Transactions()),
-                  );
-                },
-              ),
-              HomeTileButton(
-                icon: Icons.money,
-                label: "Check Tip",
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => CheckTip()),
-                  );
-                },
-              ),
-            ],
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(10.0),
+            child: GridView.count(
+              crossAxisCount: crossAxisCount,
+              crossAxisSpacing: 10.0,
+              mainAxisSpacing: 10.0,
+              childAspectRatio: 2,
+              children: [
+                HomeTileButton(
+                  icon: Icons.login,
+                  label: "Clock IN",
+                  onPressed: () {
+                    ClockDialog.showClocksDialog(
+                      context,
+                      ClockDialogAction.clockIn,
+                    );
+                  },
+                ),
+                HomeTileButton(
+                  icon: Icons.logout,
+                  label: "Clock OUT",
+                  onPressed: () {
+                    ClockDialog.showClocksDialog(
+                      context,
+                      ClockDialogAction.clockOut,
+                    );
+                  },
+                ),
+                HomeTileButton(
+                  icon: Icons.cut_sharp,
+                  label: "Transactions",
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => Transactions()),
+                    );
+                  },
+                ),
+                HomeTileButton(
+                  icon: Icons.money,
+                  label: "Check Tip",
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => CheckTip()),
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
         ),
       ),

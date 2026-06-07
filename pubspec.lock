@@ -206,14 +206,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.0.0"
-  flutter_glass_morphism:
-    dependency: "direct main"
-    description:
-      name: flutter_glass_morphism
-      sha256: c5e5e7ecc73b43cd1e1231e2a12eae8dc6fb77ed47d44073f9fe25f59481d506
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.0.2"
   flutter_lints:
     dependency: "direct dev"
     description:
@@ -248,6 +240,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.5.0"
+  google_fonts:
+    dependency: "direct main"
+    description:
+      name: google_fonts
+      sha256: "517b20870220c48752eafa0ba1a797a092fb22df0d89535fd9991e86ee2cdd9c"
+      url: "https://pub.dev"
+    source: hosted
+    version: "6.3.2"
   gotrue:
     dependency: transitive
     description:

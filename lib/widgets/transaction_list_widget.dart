@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:kiosk_app/components/transactionModel.dart';
-import 'package:kiosk_app/components/transaction_item.dart';
-import 'package:kiosk_app/services/database_service.dart';
+import 'package:kiosk_app/models/transaction_item.dart';
+import 'package:kiosk_app/models/transaction_model.dart';
+import 'package:kiosk_app/services/database/repositories/transaction_repository.dart';
 
 class TransactionListWidget extends StatelessWidget {
-  // We pass the future to the widget, which contains the list filtered by the parent.
   final Future<List<TransactionHeader>> transactionsFuture;
-  final DatabaseService database;
+  final TransactionRepository database;
 
   const TransactionListWidget({
     super.key,
@@ -15,7 +14,6 @@ class TransactionListWidget extends StatelessWidget {
     required this.database,
   });
 
-  // --- Helper for displaying detail rows in the dialog ---
   Widget _buildDetailRow(
     String label,
     String value, {
@@ -50,12 +48,10 @@ class TransactionListWidget extends StatelessWidget {
     );
   }
 
-  // --- Function to show the detailed breakdown of a transaction ---
   void _showTransactionDetails(BuildContext context, TransactionHeader header) {
     showDialog(
       context: context,
       builder: (context) {
-        // Use a FutureBuilder to fetch the line items on demand
         return FutureBuilder<List<TransactionItem>>(
           future: database.getItemsForTransaction(header.id!),
           builder: (context, snapshot) {
@@ -71,19 +67,15 @@ class TransactionListWidget extends StatelessWidget {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(15),
               ),
-              title: Text(
+              title: const Text(
                 'Transaction Details',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.blueGrey,
-                ),
+                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey),
               ),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Handle Item loading errors
                     if (hasError)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 8.0),
@@ -92,8 +84,6 @@ class TransactionListWidget extends StatelessWidget {
                           style: const TextStyle(color: Colors.red),
                         ),
                       ),
-
-                    // Summary Section
                     _buildDetailRow("Employee Name:", header.employeeName!),
                     _buildDetailRow("Payment:", header.paymentMethod),
                     _buildDetailRow(
@@ -101,14 +91,9 @@ class TransactionListWidget extends StatelessWidget {
                       DateFormat('MMM dd, hh:mm a').format(header.timestamp),
                     ),
                     const Divider(),
-
-                    // Items Section
                     const Text(
                       "Items Sold:",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                     if (items.isEmpty)
                       const Padding(
@@ -127,9 +112,7 @@ class TransactionListWidget extends StatelessWidget {
                           ),
                         ),
                       ),
-                    const Divider(),
-
-                    // Financial Breakdown
+                    const Divider(color: Colors.black, thickness: 1.5),
                     _buildDetailRow(
                       "Base Total:",
                       "€${header.baseTotal.toStringAsFixed(2)}",
@@ -213,17 +196,12 @@ class TransactionListWidget extends StatelessWidget {
                 itemCount: transactions.length,
                 itemBuilder: (context, index) {
                   final tx = transactions[index];
-
-                  final formattedDate = DateFormat(
-                    'yyyy-MM-dd HH:mm',
-                  ).format(tx.timestamp);
+                  final formattedDate =
+                      DateFormat('yyyy-MM-dd HH:mm').format(tx.timestamp);
 
                   return Card(
                     elevation: 4,
-                    margin: const EdgeInsets.symmetric(
-                      vertical: 8.0,
-                      horizontal: 8.0,
-                    ),
+                    margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -246,7 +224,9 @@ class TransactionListWidget extends StatelessWidget {
                         ),
                       ),
                       title: Text(
-                        "Transaction #${tx.id}",
+                        tx.id != null
+                            ? "Transaction #${tx.id!.substring(tx.id!.length - 8).toUpperCase()}"
+                            : "Transaction",
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,

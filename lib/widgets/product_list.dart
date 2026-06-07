@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:kiosk_app/components/cart_Item.dart';
-import 'package:kiosk_app/components/products.dart';
+import 'package:kiosk_app/models/cart_item.dart';
+import 'package:kiosk_app/models/products.dart';
 
 class ProductList extends StatelessWidget {
   final Future<List<Product>> productsFuture;
@@ -52,7 +52,7 @@ class ProductList extends StatelessWidget {
                         ),
                         Text(
                           "${cartItems[key]?.quantity ?? 0}",
-                          style: TextStyle(color: Colors.black),
+                          style: const TextStyle(color: Colors.black),
                         ),
                         IconButton(
                           onPressed: () => onIncrement(

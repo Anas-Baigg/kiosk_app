@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:kiosk_app/screens/app_state.dart';
+import 'package:kiosk_app/utils/logger.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'database_service.dart';
@@ -43,7 +43,7 @@ class SyncService {
       // Debounce multiple events
       _debounceTimer?.cancel();
       _debounceTimer = Timer(const Duration(seconds: 2), () async {
-        debugPrint("Connection restored: Triggering auto-sync...");
+        AppLogger.sync("Connection restored: Triggering auto-sync...");
         await syncAll();
       });
     });
@@ -85,17 +85,38 @@ class SyncService {
     try {
       if (!await isOnline()) return false;
 
-      // Order matters
-      await syncEmployees();
-      await syncProducts();
-      await syncCuts();
-      await syncTimeLogs();
-      await syncTransactions();
-      await syncTillbalance();
+      // Order matters — call internal methods directly to bypass the per-method
+      // _isSyncing guard, which would otherwise block since the flag is already set.
+      await _syncSimpleTable(
+        remoteTable: 'employee',
+        localTable: DatabaseService.tableEmployee,
+        idColumn: DatabaseService.colEmployeeId,
+      );
+      await _syncSimpleTable(
+        remoteTable: 'products',
+        localTable: DatabaseService.tableProducts,
+        idColumn: DatabaseService.colProductId,
+      );
+      await _syncSimpleTable(
+        remoteTable: 'cuts',
+        localTable: DatabaseService.tableCuts,
+        idColumn: DatabaseService.colCutId,
+      );
+      await _syncSimpleTable(
+        remoteTable: 'time_logs',
+        localTable: DatabaseService.tableTime,
+        idColumn: DatabaseService.colLogId,
+      );
+      await _syncTransactionsInternal();
+      await _syncSimpleTable(
+        remoteTable: 'till_balance',
+        localTable: DatabaseService.tableTillBalance,
+        idColumn: DatabaseService.colTillBalanceId,
+      );
 
       return true;
     } catch (e) {
-      debugPrint("Sync failed: $e");
+      AppLogger.error("Sync failed", e);
       return false;
     } finally {
       _isSyncing = false;
@@ -105,51 +126,90 @@ class SyncService {
   // ---------- Table sync methods ----------
 
   Future<void> syncEmployees() async {
-    await _syncSimpleTable(
-      remoteTable: 'employee',
-      localTable: DatabaseService.tableEmployee,
-      idColumn: DatabaseService.colEmployeeId,
-    );
+    if (_isSyncing) return;
+    _isSyncing = true;
+    try {
+      await _syncSimpleTable(
+        remoteTable: 'employee',
+        localTable: DatabaseService.tableEmployee,
+        idColumn: DatabaseService.colEmployeeId,
+      );
+    } finally {
+      _isSyncing = false;
+    }
   }
 
   Future<void> syncProducts() async {
-    await _syncSimpleTable(
-      remoteTable: 'products',
-      localTable: DatabaseService.tableProducts,
-      idColumn: DatabaseService.colProductId,
-    );
+    if (_isSyncing) return;
+    _isSyncing = true;
+    try {
+      await _syncSimpleTable(
+        remoteTable: 'products',
+        localTable: DatabaseService.tableProducts,
+        idColumn: DatabaseService.colProductId,
+      );
+    } finally {
+      _isSyncing = false;
+    }
   }
 
   Future<void> syncCuts() async {
-    await _syncSimpleTable(
-      remoteTable: 'cuts',
-      localTable: DatabaseService.tableCuts,
-      idColumn: DatabaseService.colCutId,
-    );
+    if (_isSyncing) return;
+    _isSyncing = true;
+    try {
+      await _syncSimpleTable(
+        remoteTable: 'cuts',
+        localTable: DatabaseService.tableCuts,
+        idColumn: DatabaseService.colCutId,
+      );
+    } finally {
+      _isSyncing = false;
+    }
   }
 
   Future<void> syncTimeLogs() async {
-    await _syncSimpleTable(
-      remoteTable: 'time_logs',
-      localTable: DatabaseService.tableTime,
-      idColumn: DatabaseService.colLogId,
-    );
+    if (_isSyncing) return;
+    _isSyncing = true;
+    try {
+      await _syncSimpleTable(
+        remoteTable: 'time_logs',
+        localTable: DatabaseService.tableTime,
+        idColumn: DatabaseService.colLogId,
+      );
+    } finally {
+      _isSyncing = false;
+    }
   }
 
   Future<void> syncTillbalance() async {
-    await _syncSimpleTable(
-      remoteTable: 'till_balance',
-      localTable: DatabaseService.tableTillBalance,
-      idColumn: DatabaseService.colTillBalanceId,
-    );
+    if (_isSyncing) return;
+    _isSyncing = true;
+    try {
+      await _syncSimpleTable(
+        remoteTable: 'till_balance',
+        localTable: DatabaseService.tableTillBalance,
+        idColumn: DatabaseService.colTillBalanceId,
+      );
+    } finally {
+      _isSyncing = false;
+    }
   }
 
   Future<void> syncTransactions() async {
-    final shopId = _shopIdSafe;
-    if (shopId == null) return;
-
     if (_isSyncing) return;
     _isSyncing = true;
+    try {
+      await _syncTransactionsInternal();
+    } finally {
+      _isSyncing = false;
+    }
+  }
+
+  // ---------- Internal sync logic (no _isSyncing guard) ----------
+
+  Future<void> _syncTransactionsInternal() async {
+    final shopId = _shopIdSafe;
+    if (shopId == null) return;
 
     final db = await _dbService.database;
 
@@ -216,12 +276,10 @@ class SyncService {
         }
       });
     } on AuthException catch (e) {
-      debugPrint("Auth error syncing transactions: ${e.message}");
+      AppLogger.error("Auth error syncing transactions", e);
       rethrow;
     } catch (e) {
-      debugPrint("Error syncing transactions: $e");
-    } finally {
-      _isSyncing = false;
+      AppLogger.error("Error syncing transactions", e);
     }
   }
 
@@ -234,10 +292,6 @@ class SyncService {
   }) async {
     final shopId = _shopIdSafe;
     if (shopId == null) return;
-
-    // Prevent collisions with other syncs
-    if (_isSyncing) return;
-    _isSyncing = true;
 
     final db = await _dbService.database;
 
@@ -273,12 +327,10 @@ class SyncService {
         }
       });
     } on AuthException catch (e) {
-      debugPrint("Auth error syncing $remoteTable: ${e.message}");
+      AppLogger.error("Auth error syncing $remoteTable", e);
       rethrow;
     } catch (e) {
-      debugPrint("Error syncing $remoteTable: $e");
-    } finally {
-      _isSyncing = false;
+      AppLogger.error("Error syncing $remoteTable", e);
     }
   }
 

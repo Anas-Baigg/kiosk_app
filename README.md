@@ -1,154 +1,125 @@
 # Barber POS & Kiosk System (Flutter)
 
-An *offline-first, multi-tenant barbershop POS and kiosk system* built with Flutter.  
-Designed for real-world use with employee time tracking, transactions, reporting, and reliable cloud synchronization.
+An offline-first, multi-tenant barbershop POS and kiosk system built with Flutter.  
+Designed for real-world tablet use with employee time tracking, transactions, financial reporting, and cloud synchronisation.
 
-The system works fully offline using SQLite and automatically syncs data when connectivity is available.
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Framework | Flutter 3.x / Dart SDK ^3.8.1 |
+| Local storage | SQLite via `sqflite ^2.4.2` |
+| Cloud backend | Supabase (PostgreSQL + Auth) via `supabase_flutter ^2.0.0` |
+| Admin security | bcrypt password hashing via `bcrypt ^1.2.0` |
+| Connectivity | `connectivity_plus ^7.0.0` |
+| Local persistence | `shared_preferences ^2.2.0` |
+| Config | `flutter_dotenv ^6.0.0` — credentials read from `.env` at runtime |
+
+---
+
+## Architecture
+
+The app is **offline-first**: SQLite is the write-ahead source of truth for all user interactions. Supabase is the sync target and cloud backup, not the primary data store.
+
+```
+Auth (Supabase)
+    ↓
+Shop selection → AppState (static in-memory) + SharedPreferences
+    ↓
+SQLite (all reads/writes during normal use)
+    ↓
+SyncService → Supabase (push unsynced rows on connectivity)
+```
+
+**State management**: no library. `AppState` is a plain static class holding `shopId`, `shopName`, and `adminPasswordHash`. Feature pages use `StatefulWidget` + `FutureBuilder` with direct SQLite queries.
+
+---
+
+## Authentication
+
+- **User login**: Supabase email/password (PKCE flow)
+- **Admin access**: 5-digit numeric passcode, bcrypt-hashed and stored in SharedPreferences; brute-force protected (3-attempt limit, 60-second lockout)
+- **Employee clock-in**: 5-digit numeric passcode stored as a plaintext integer in SQLite; no brute-force protection yet
+
+---
+
+## Multi-Shop Support
+
+Each Supabase user can own or be associated with multiple shops. On login the user selects a shop; `shop_id` is written to `AppState` and persisted in SharedPreferences. Every SQLite table and every Supabase query is scoped by `shop_id`.
 
 ---
 
 ## Core Features
 
-### Offline-First Architecture
-- Fully functional without internet
-- Local persistence using SQLite
-- Automatic sync when connectivity is restored
-- Manual sync controls available for reliability
+### Employee Time Tracking
+- Clock in / clock out via passcode
+- One open shift per day enforced
+- Auto-recovery: if an employee forgets to clock out, the next clock-in safely closes the previous shift
+
+### Transactions (POS Flow)
+- Select clocked-in employee
+- Add services (cuts) and products to cart
+- Apply tip and discount (amount-based)
+- Choose payment method: Cash or Card
+- Saved atomically to SQLite (header + items in one transaction)
+
+### Reporting
+- Financial summary: totals, tips, discounts, payment breakdown
+- Time log history
+- Till balance per day
+- Date-range picker for all report types
+
+### Admin Management
+- CRUD for employees, services (cuts), and products
+- Items are deactivated rather than deleted (historical integrity)
+- Generic `ManagementListPage` widget handles all three entity types
 
 ---
 
-## Authentication & Shops
-
-### Authentication
-- Email/password authentication (Supabase)
-- Input validation for email and password
-- Secure session handling with login/logout support
-
-### Multi-Shop Support
-- Users can manage *multiple shops*
-- On login:
-  - Select an existing shop
-  - Or create a new shop
-- Each shop includes:
-  - Shop name
-  - Admin password (required for admin-only actions)
-
-### Shop Context Handling
-- Selected shop_id is:
-  - Stored in app state (in-memory)
-  - Persisted locally (SharedPreferences)
-- All operations are strictly scoped to the active shop
-- Prevents cross-shop data access or leakage
-
----
-
-## Admin Management
-
-### Employees
-- Create employees with:
-  - Name
-  - 5-digit passcode (kiosk-friendly)
-- Employees are *preserved for historical integrity*
-- Validations prevent invalid or duplicate entries
-
-### Products & Cuts(Services)
-- Manage products sold in-shop
-- Manage services (e.g. haircut, shave)
-- Prices stored as decimals
-- Items are preserved for reporting and historical data
-
----
-
-## Employee Time Tracking
-- Clock in / clock out using passcode
-- One clock-in and one clock-out per day (validated)
-- Automatic recovery:
-  - If an employee forgets to clock out, the next clock-in safely closes the previous shift
-- All timestamps stored in *UTC* to avoid timezone issues
-
----
-
-## Transactions (POS Flow)
-- Employee selection
-- Add multiple:
-  - Services
-  - Products
-- Supports:
-  - Tips
-  - Discounts (amount-based)
-  - Payment method (Cash / Card)
-- Transactions stored locally and synced automatically
-
----
-
-## Reporting
-- Financial reports including:
-  - Total sales
-  - Tips
-  - Discounts
-  - Payment method breakdown
-- Local device stores approximately *60 days* of transactional data
-- Older data remains accessible from the cloud
-- Automatic pruning to control device storage usage
-
----
-
-## Cloud Sync Strategy
+## Cloud Sync
 
 ### Sync Metadata
-Each table includes:
-- shop_id
-- created_at
-- last_synced_at
+Every SQLite table has `shop_id`, `created_at`, and `last_synced_at`.
+
+- `last_synced_at IS NULL` → record is pending upload
+- `last_synced_at IS NOT NULL` → already uploaded, skip
 
 ### Automatic Sync
-- On app launch:
-  - Connectivity is checked automatically
-  - Pending changes are synced if internet is available
-- On every data change:
-  - App attempts immediate upload
-  - On success, last_synced_at is updated
+`SyncService` monitors connectivity. When internet is restored a 2-second debounced trigger calls the sync pipeline. `syncAll()` calls internal sync methods directly (bypassing their individual `_isSyncing` guards), so auto-sync on connectivity restore correctly uploads pending rows.
 
-### Sync Rules
-- last_synced_at == null → upload
-- last_synced_at != null → skip upload
+### Data Retention
+- On fresh install / device change: full reference data (employees, cuts, products) is downloaded; last **30 days** of transactions, time logs, and till balance are pulled down
+- Purge job deletes synced records older than **30 days** to control local storage
+- Data older than 30 days remains in Supabase and is accessible via reports if re-downloaded
 
-This prevents:
-- Duplicate uploads
-- Unnecessary network usage
-- Data conflicts
-
-### Manual Sync Controls
-- Manual refresh/upload buttons available per feature (e.g. employees, products)
-- Allows recovery if automatic sync was interrupted
+### Conflict Resolution
+During a pull, rows that already exist locally with `last_synced_at IS NULL` (unsynced local changes) are skipped, preserving local-first behaviour.
 
 ---
 
-## Device Change / Reinstallation
-- On login:
-  - Downloads core shop data (employees, products, services)
-- Reports:
-  - Only last 60 days downloaded locally
-- Cloud remains the source of truth for historical data
+## Credentials & Security Notes
+
+- Supabase credentials are stored in `.env` at the project root, which is excluded from version control via `.gitignore`
+- `.env` is listed as a Flutter asset in `pubspec.yaml`, so it is **compiled into the app binary** — credentials are extractable from the APK
+- For Supabase ANON keys, client-side exposure is by design; actual data security depends on Row Level Security (RLS) policies configured in the Supabase dashboard (not part of this repository)
+- Employee passcodes are stored as plaintext integers in SQLite; only the admin passcode uses bcrypt
+- Admin passcode entry has brute-force protection (3 attempts, 60-second lockout); employee clock-in does not yet
 
 ---
 
-## Tech Stack
-- Flutter (Dart)
-- SQLite (offline storage)
-- Supabase (authentication & cloud database)
-- Android kiosk/tablet optimized UI
+## Project Status
 
----
+This is a private portfolio project, not yet production-hardened. Key open items:
 
-## Notes
-- Designed with production constraints in mind:
-  - Offline reliability
-  - Data integrity
-  - Multi-tenant security
-- Secrets and production configuration are not committed
+- Hash employee passcodes at rest (currently plaintext integers in SQLite)
+- Add brute-force protection to employee clock-in passcode entry (admin passcode already protected)
+- Add test coverage (no tests currently exist)
+- Verify Supabase RLS policies are configured for all tables (cannot be confirmed from this repo alone)
 
 ---
 
 ## License
+
 Private / Portfolio project

@@ -66,9 +66,7 @@ class UniversalScaffold extends StatelessWidget {
       appBar: AppBar(
         title: Text(title),
         flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            color: Color.fromARGB(255, 55, 63, 81),
-          ),
+          decoration: const BoxDecoration(color: Color(0xFF37393F)),
         ),
         foregroundColor: Colors.white,
         actions: [
@@ -81,9 +79,7 @@ class UniversalScaffold extends StatelessWidget {
         ],
       ),
       body: Container(
-        decoration: const BoxDecoration(
-          color: Color.fromARGB(255, 216, 219, 226),
-        ),
+        decoration: const BoxDecoration(color: Color(0xFFD8DBE2)),
         child: body,
       ),
     );

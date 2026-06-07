@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:kiosk_app/screens/app_state.dart';
 import 'package:kiosk_app/screens/shop_storage.dart';
 import 'package:kiosk_app/services/download_service.dart';
-import 'package:kiosk_app/services/shop_name.dart';
-import 'package:kiosk_app/ui/gradient_scaffold.dart';
+import 'package:kiosk_app/utils/validators/shop_validators.dart';
+import 'package:kiosk_app/widgets/gradient_scaffold.dart';
 import 'package:kiosk_app/views/home_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:bcrypt/bcrypt.dart';
@@ -264,17 +264,12 @@ class _ShopSelectionScreenState extends State<ShopSelectionScreen> {
                                     keyboardType: TextInputType.name,
                                     autovalidateMode:
                                         AutovalidateMode.onUserInteraction,
-                                    validator: ValidatorsShopName.shopName,
+                                    validator: ShopValidators.shopName,
                                     onFieldSubmitted: (_) =>
                                         _creating ? null : _createShop(),
-                                    decoration: InputDecoration(
+                                    decoration: const InputDecoration(
                                       hintText: 'New shop name',
-                                      prefixIcon: const Icon(
-                                        Icons.add_business,
-                                      ),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
+                                      prefixIcon: Icon(Icons.add_business),
                                     ),
                                   ),
                                 ),
@@ -287,18 +282,15 @@ class _ShopSelectionScreenState extends State<ShopSelectionScreen> {
 
                                     autovalidateMode:
                                         AutovalidateMode.onUserInteraction,
-                                    validator: ValidatorsShopName.adminPassword,
+                                    validator: ShopValidators.adminPassword,
 
                                     onFieldSubmitted: (_) =>
                                         _creating ? null : _createShop(),
-                                    decoration: InputDecoration(
+                                    decoration: const InputDecoration(
                                       hintText: '5-Digit Admin Pass',
                                       labelText: 'Admin Password',
-                                      prefixIcon: const Icon(
+                                      prefixIcon: Icon(
                                         Icons.add_moderator_outlined,
-                                      ),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
                                       ),
                                     ),
                                   ),
@@ -323,12 +315,6 @@ class _ShopSelectionScreenState extends State<ShopSelectionScreen> {
                                         )
                                       : ElevatedButton(
                                           onPressed: _createShop,
-                                          style: ElevatedButton.styleFrom(
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                            ),
-                                          ),
                                           child: const Text('Create'),
                                         ),
                                 ),

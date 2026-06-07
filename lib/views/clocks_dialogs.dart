@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:kiosk_app/services/database/database_service.dart';
+import 'package:kiosk_app/services/database/repositories/employee_repository.dart';
+import 'package:kiosk_app/services/database/repositories/time_log_repository.dart';
 import 'package:kiosk_app/services/sync_service.dart';
-import '../services/database_service.dart';
 
 enum ClockDialogAction { clockIn, clockOut }
 
@@ -127,8 +129,12 @@ class ClockDialog {
                             });
                             return;
                           }
-                          final db = DatabaseService.instance;
-                          final empId = await db.getEmployeeIdByPasscode(raw);
+                          final empRepo =
+                              EmployeeRepository(DatabaseService.instance);
+                          final timeRepo =
+                              TimeLogRepository(DatabaseService.instance);
+                          final empId =
+                              await empRepo.getEmployeeIdByPasscode(raw);
                           if (empId == null) {
                             setState(() {
                               feedback =
@@ -139,7 +145,7 @@ class ClockDialog {
                           }
 
                           if (isIn) {
-                            final res = await db.clockIn(empId);
+                            final res = await timeRepo.clockIn(empId);
                             if (res == -1) {
                               setState(() {
                                 feedback = "You already have an open shift";
@@ -148,18 +154,12 @@ class ClockDialog {
                               return;
                             }
 
-                            setState(() {
-                              success = true;
-                            });
-
-                            // Auto-sync time logs after clock in
-                            final syncService = SyncService.instance;
-                            syncService.syncTimeLogs();
-
+                            setState(() => success = true);
+                            SyncService.instance.syncTimeLogs();
                             await Future.delayed(const Duration(seconds: 1));
-                            Navigator.pop(context, true);
+                            if (context.mounted) Navigator.pop(context, true);
                           } else {
-                            final ok = await db.clockOut(empId);
+                            final ok = await timeRepo.clockOut(empId);
                             if (!ok) {
                               setState(() {
                                 feedback = "You are not clocked in.";
@@ -167,22 +167,15 @@ class ClockDialog {
                               });
                               return;
                             }
-                            setState(() {
-                              success = true;
-                            });
-
-                            // Auto-sync time logs after clock out
-                            final syncService = SyncService.instance;
-                            syncService.syncTimeLogs();
-
+                            setState(() => success = true);
+                            SyncService.instance.syncTimeLogs();
                             await Future.delayed(const Duration(seconds: 1));
-                            Navigator.pop(context, true);
+                            if (context.mounted) Navigator.pop(context, true);
                           }
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: isIn
-                              ? Colors.green[600]
-                              : Colors.red[600],
+                          backgroundColor:
+                              isIn ? Colors.green[600] : Colors.red[600],
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(6),
                           ),

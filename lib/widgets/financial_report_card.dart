@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:kiosk_app/components/dailyfinance.dart';
+import 'package:kiosk_app/models/daily_finance.dart';
 
 class FinancialReportCard extends StatelessWidget {
   final int totalTransactions;
@@ -28,7 +28,6 @@ class FinancialReportCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 🔹 TITLE
             const Text(
               "Financial Summary",
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -36,31 +35,16 @@ class FinancialReportCard extends StatelessWidget {
 
             const SizedBox(height: 12),
 
-            // 🔹 RANGE SUMMARY
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _summaryTile(
-                  "Transactions",
-                  totalTransactions.toString(),
-                  Colors.blue,
-                ),
-                _summaryTile(
-                  "Cash",
-                  "€${totalCash.toStringAsFixed(2)}",
-                  Colors.green,
-                ),
-                _summaryTile(
-                  "Card",
-                  "€${totalCard.toStringAsFixed(2)}",
-                  Colors.purple,
-                ),
+                Expanded(child: _summaryTile("Transactions", totalTransactions.toString(), Colors.blue)),
+                Expanded(child: _summaryTile("Cash", "€${totalCash.toStringAsFixed(2)}", Colors.green)),
+                Expanded(child: _summaryTile("Card", "€${totalCard.toStringAsFixed(2)}", Colors.purple)),
               ],
             ),
 
             const SizedBox(height: 20),
 
-            // 🔹 TIPS
             const Text(
               "Tips Per Employee",
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
@@ -87,7 +71,6 @@ class FinancialReportCard extends StatelessWidget {
 
             const SizedBox(height: 8),
 
-            // Header row
             Row(
               children: const [
                 Expanded(child: Text("Date", style: _headerStyle)),
@@ -102,19 +85,16 @@ class FinancialReportCard extends StatelessWidget {
             const Divider(),
 
             SizedBox(
-              height: 220, //
+              height: 220,
               child: ListView.builder(
                 itemCount: dailyFinance.length,
                 itemBuilder: (context, index) {
                   final d = dailyFinance[index];
-
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 6.0),
                     child: Row(
                       children: [
-                        Expanded(
-                          child: Text(DateFormat('yyyy-MM-dd').format(d.date)),
-                        ),
+                        Expanded(child: Text(DateFormat('yyyy-MM-dd').format(d.date))),
                         Text("€${d.cashTotal.toStringAsFixed(2)}"),
                         const SizedBox(width: 16),
                         Text("€${d.cardTotal.toStringAsFixed(2)}"),
@@ -134,18 +114,18 @@ class FinancialReportCard extends StatelessWidget {
 
   Widget _summaryTile(String label, String value, Color color) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(
           value,
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
+          textAlign: TextAlign.center,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color),
         ),
         const SizedBox(height: 4),
         Text(
           label,
+          textAlign: TextAlign.center,
           style: const TextStyle(fontSize: 13, color: Colors.black54),
         ),
       ],

@@ -1,7 +1,8 @@
-class ValidatorsShopName {
-  ValidatorsShopName._();
+class ShopValidators {
+  ShopValidators._();
 
   static final RegExp _passcodeRegex = RegExp(r'^\d{5}$');
+
   static String? shopName(String? value) {
     final v = value?.trim() ?? '';
 

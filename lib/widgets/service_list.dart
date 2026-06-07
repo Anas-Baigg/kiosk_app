@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:kiosk_app/components/cart_Item.dart';
-import 'package:kiosk_app/components/cuts.dart';
+import 'package:kiosk_app/models/cart_item.dart';
+import 'package:kiosk_app/models/cuts.dart';
 
 class ServiceList extends StatelessWidget {
   final Future<List<Cuts>> cutsFuture;
@@ -44,7 +44,6 @@ class ServiceList extends StatelessWidget {
                     subtitle: Text("€${cut.price}"),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
-
                       children: [
                         IconButton(
                           onPressed: () => onDecrement(key),
@@ -53,7 +52,7 @@ class ServiceList extends StatelessWidget {
                         ),
                         Text(
                           "${cartItems[key]?.quantity ?? 0}",
-                          style: TextStyle(color: Colors.black),
+                          style: const TextStyle(color: Colors.black),
                         ),
                         IconButton(
                           onPressed: () =>

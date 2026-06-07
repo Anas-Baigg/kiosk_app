@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:kiosk_app/screens/app_state.dart';
+import 'package:kiosk_app/utils/logger.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -12,7 +12,7 @@ class PullService {
   String get currentShopId => AppState.requireShopId();
 
   Future<bool> fullDownloadFromCloud({int historyDays = 30}) async {
-    debugPrint("Starting Full Sync: Downloading then Pruning...");
+    AppLogger.sync("Starting Full Sync: Downloading then Pruning...");
 
     try {
       //Reference data
@@ -26,10 +26,10 @@ class PullService {
       // prune AFTER successful pull
       await _dbService.purgeOldHistory(keepDays: historyDays);
 
-      debugPrint("Full Sync complete.");
+      AppLogger.sync("Full Sync complete.");
       return true;
     } catch (e) {
-      debugPrint("Full sync failed: $e");
+      AppLogger.error("Full sync failed", e);
       return false;
     }
   }
@@ -61,7 +61,7 @@ class PullService {
     );
   }
 
-  Future<void> downloadRecentHistory({int historyDays = 60}) async {
+  Future<void> downloadRecentHistory({int historyDays = 30}) async {
     final db = await _dbService.database;
     final cutoffIso = DateTime.now()
         .toUtc()
@@ -166,7 +166,10 @@ class PullService {
     );
   }
 
-  /// Local unsynced = last_synced_at IS NULL.
+  /// Upserts rows downloaded from Supabase into the local table.
+  /// Skips rows that have unsynced local edits (last_synced_at IS NULL locally).
+  /// Stamps last_synced_at = now() on every row that IS inserted so the sync
+  /// service does not immediately treat downloaded data as pending upload.
   Future<void> _safeUpsertMany({
     required Database db,
     required String localTable,
@@ -176,38 +179,45 @@ class PullService {
   }) async {
     if (rows.isEmpty) return;
 
-    // enforce correct shop_id in all rows
+    final nowIso = DateTime.now().toUtc().toIso8601String();
+
     for (final row in rows) {
       row[DatabaseService.colShopId] = currentShopId;
-
       if (normalizeIsActive && row.containsKey(DatabaseService.colIsActive)) {
         row[DatabaseService.colIsActive] =
             (row[DatabaseService.colIsActive] == true) ? 1 : 0;
       }
     }
 
+    final ids = rows.map((r) => r[idColumn]).whereType<String>().toList();
+
     await db.transaction((txn) async {
-      for (final row in rows) {
-        final id = row[idColumn];
-        if (id == null) continue;
-
-        // Check if local row exists AND is unsynced (protected)
-        final local = await txn.query(
-          localTable,
-          columns: [DatabaseService.colLastSynced],
-          where: '$idColumn = ? AND ${DatabaseService.colShopId} = ?',
-          whereArgs: [id, currentShopId],
-          limit: 1,
+      // Batch-fetch existing local rows to check for unsynced data — one query
+      // per 200-row chunk instead of N individual SELECTs.
+      final Map<String, bool> unsyncedById = {};
+      for (final chunk in _chunks(ids, 200)) {
+        final placeholders = chunk.map((_) => '?').join(',');
+        final existing = await txn.rawQuery(
+          'SELECT $idColumn, ${DatabaseService.colLastSynced} '
+          'FROM $localTable '
+          'WHERE $idColumn IN ($placeholders) AND ${DatabaseService.colShopId} = ?',
+          [...chunk, currentShopId],
         );
-
-        final localHasUnsynced =
-            local.isNotEmpty &&
-            local.first[DatabaseService.colLastSynced] == null;
-
-        if (localHasUnsynced) {
-          // Do NOT overwrite local unsynced changes
-          continue;
+        for (final r in existing) {
+          final id = r[idColumn] as String?;
+          if (id != null) {
+            unsyncedById[id] = r[DatabaseService.colLastSynced] == null;
+          }
         }
+      }
+
+      for (final row in rows) {
+        final id = row[idColumn] as String?;
+        if (id == null) continue;
+        if (unsyncedById[id] == true) continue; // protect local unsynced edits
+
+        // Mark as synced: data came from the server.
+        row[DatabaseService.colLastSynced] = nowIso;
 
         await txn.insert(
           localTable,

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:kiosk_app/components/till_balance.dart';
+import 'package:kiosk_app/models/till_balance.dart';
 import 'package:kiosk_app/screens/app_state.dart';
-import 'package:kiosk_app/services/database_service.dart';
+import 'package:kiosk_app/services/database/database_service.dart';
+import 'package:kiosk_app/services/database/repositories/till_balance_repository.dart';
 import 'package:kiosk_app/services/sync_service.dart';
 import 'package:uuid/uuid.dart';
 
@@ -9,20 +10,17 @@ class TillBalanceDialog {
   static Future<bool> checkAndShow(BuildContext context) async {
     final now = DateTime.now();
     final todayMidnight = DateTime(now.year, now.month, now.day);
-    final db = DatabaseService.instance;
+    final repo = TillBalanceRepository(DatabaseService.instance);
 
-    final existing = await db.getTillBalanceByDate(todayMidnight);
+    final existing = await repo.getTillBalanceByDate(todayMidnight);
 
-    // If today already has a balance  nothing to do
     if (existing != null) return true;
 
-    // Show dialog and wait for result
     final result = await _showOpeningDialog(context, todayMidnight);
 
     return result ?? false;
   }
 
-  /// INTERNAL: Show modal dialog
   static Future<bool?> _showOpeningDialog(
     BuildContext context,
     DateTime today,
@@ -54,7 +52,6 @@ class TillBalanceDialog {
                 final value = double.tryParse(controller.text) ?? -1;
 
                 if (value < 0) {
-                  // invalid input
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text("Please enter a valid amount"),
@@ -63,9 +60,7 @@ class TillBalanceDialog {
                   return;
                 }
 
-                // Create model
                 final uuid = const Uuid();
-
                 final model = TillBalance(
                   id: uuid.v4(),
                   balanceAmount: value,
@@ -73,10 +68,9 @@ class TillBalanceDialog {
                   shopId: AppState.requireShopId(),
                 );
 
-                // Save the record
-                await DatabaseService.instance.insertTillBalance(model);
-                final syncService = SyncService.instance;
-                syncService.syncTillbalance();
+                final repo = TillBalanceRepository(DatabaseService.instance);
+                await repo.insertTillBalance(model);
+                SyncService.instance.syncTillbalance();
                 Navigator.pop(context, true);
               },
               child: const Text("Save"),

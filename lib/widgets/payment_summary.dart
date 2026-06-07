@@ -21,20 +21,20 @@ class PaymentSummary extends StatelessWidget {
     required this.onConfirmCash,
     required this.onConfirmCard,
   });
+
   static const _labelStyle = TextStyle(
     fontSize: 18,
     fontWeight: FontWeight.bold,
-    fontStyle: FontStyle.normal,
     fontFamily: "RobotoMono",
-    color: Color.fromARGB(255, 55, 63, 81),
+    color: Color(0xFF37393F),
   );
+
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
         const SizedBox(height: 20),
 
-        // TIP + DISCOUNT
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
@@ -66,7 +66,6 @@ class PaymentSummary extends StatelessWidget {
 
         const SizedBox(height: 20),
 
-        // PAYMENT BUTTONS
         Row(
           children: [
             Expanded(
