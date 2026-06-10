@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:kiosk_app/services/realtime_service.dart';
 
-class EmployeeDropdown extends StatelessWidget {
+class EmployeeDropdown extends StatefulWidget {
   final Future<List<Map<String, dynamic>>> activeEmployeesFuture;
   final String? selectedEmployeeId;
   final ValueChanged<String?> onChanged;
@@ -15,9 +16,28 @@ class EmployeeDropdown extends StatelessWidget {
   });
 
   @override
+  State<EmployeeDropdown> createState() => _EmployeeDropdownState();
+}
+
+class _EmployeeDropdownState extends State<EmployeeDropdown> {
+  @override
+  void initState() {
+    super.initState();
+    RealtimeService.instance.setOnChangeCallback((table) {
+      if (table == 'employee') widget.onRefresh();
+    });
+  }
+
+  @override
+  void dispose() {
+    RealtimeService.instance.clearOnChangeCallback();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<Map<String, dynamic>>>(
-      future: activeEmployeesFuture,
+      future: widget.activeEmployeesFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
@@ -57,7 +77,7 @@ class EmployeeDropdown extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               FilledButton.icon(
-                onPressed: onRefresh,
+                onPressed: widget.onRefresh,
                 icon: const Icon(Icons.refresh),
                 label: const Text('Check again'),
               ),
@@ -71,7 +91,7 @@ class EmployeeDropdown extends StatelessWidget {
             child: Column(
               children: [
                 DropdownButtonFormField<String>(
-                  value: selectedEmployeeId,
+                  value: widget.selectedEmployeeId,
                   decoration: const InputDecoration(
                     labelText: 'Active Employee',
                   ),
@@ -83,7 +103,7 @@ class EmployeeDropdown extends StatelessWidget {
                         ),
                       )
                       .toList(),
-                  onChanged: onChanged,
+                  onChanged: widget.onChanged,
                 ),
               ],
             ),

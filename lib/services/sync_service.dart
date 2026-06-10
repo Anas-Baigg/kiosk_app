@@ -1,10 +1,15 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:kiosk_app/screens/app_state.dart';
 import 'package:kiosk_app/utils/logger.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'database_service.dart';
+import 'download_service.dart';
+import 'realtime_service.dart';
+
+enum ConnectivityStatus { online, offline, syncFailed }
 
 class SyncService {
   SyncService._internal();
@@ -16,6 +21,9 @@ class SyncService {
   StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
 
   bool _isSyncing = false;
+
+  final ValueNotifier<ConnectivityStatus> connectivityStatus =
+      ValueNotifier(ConnectivityStatus.online);
 
   // Debounce connectivity-triggered sync
   Timer? _debounceTimer;
@@ -32,19 +40,38 @@ class SyncService {
 
   /// Call once ideally after Supabase init Safe to call multiple times.
   void initConnectivityMonitoring() {
+    // Check initial connectivity so the banner is correct on cold start
+    Connectivity().checkConnectivity().then((results) {
+      final hasNetwork =
+          results.isNotEmpty && !results.contains(ConnectivityResult.none);
+      if (!hasNetwork) connectivityStatus.value = ConnectivityStatus.offline;
+    });
+
     _connectivitySub ??= Connectivity().onConnectivityChanged.listen((results) {
       final hasNetwork =
           results.isNotEmpty && !results.contains(ConnectivityResult.none);
-      if (!hasNetwork) return;
+      if (!hasNetwork) {
+        connectivityStatus.value = ConnectivityStatus.offline;
+        return;
+      }
 
       // If shop isn't selected yet, do nothing (prevents requireShopId crash)
-      if (_shopIdSafe == null) return;
+      if (_shopIdSafe == null) {
+        connectivityStatus.value = ConnectivityStatus.online;
+        return;
+      }
 
       // Debounce multiple events
       _debounceTimer?.cancel();
       _debounceTimer = Timer(const Duration(seconds: 2), () async {
         AppLogger.sync("Connection restored: Triggering auto-sync...");
         await syncAll();
+        await RealtimeService.instance.subscribe();
+        try {
+          await PullService().refreshReferenceData();
+        } catch (e) {
+          AppLogger.error("refreshReferenceData failed on reconnect", e);
+        }
       });
     });
   }
@@ -83,7 +110,10 @@ class SyncService {
     _isSyncing = true;
 
     try {
-      if (!await isOnline()) return false;
+      if (!await isOnline()) {
+        connectivityStatus.value = ConnectivityStatus.offline;
+        return false;
+      }
 
       // Order matters — call internal methods directly to bypass the per-method
       // _isSyncing guard, which would otherwise block since the flag is already set.
@@ -114,9 +144,11 @@ class SyncService {
         idColumn: DatabaseService.colTillBalanceId,
       );
 
+      connectivityStatus.value = ConnectivityStatus.online;
       return true;
     } catch (e) {
       AppLogger.error("Sync failed", e);
+      connectivityStatus.value = ConnectivityStatus.syncFailed;
       return false;
     } finally {
       _isSyncing = false;

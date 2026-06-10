@@ -21,6 +21,8 @@ class AddWorker extends StatelessWidget {
       field1Label: "Employee Name",
       field2Label: "Employee Code",
       field2KeyboardType: TextInputType.number,
+      field2Obscure: true,
+      field2UpdateHint: "Leave blank to keep current",
       listIcon: Icons.person,
       tableName: DatabaseService.tableEmployee,
       orderByColumn: DatabaseService.colName,

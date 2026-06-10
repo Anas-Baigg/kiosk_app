@@ -168,20 +168,74 @@ class _TransactionsState extends State<Transactions> {
     }
   }
 
+  void _showValidationDialog(List<String> issues) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: Center(
+          child: Text(
+            "Cannot Complete",
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.red[700],
+              fontSize: 20,
+            ),
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: issues
+              .map(
+                (issue) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.warning_amber,
+                        color: Colors.red[600],
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          issue,
+                          style: TextStyle(color: Colors.red[700]),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+              .toList(),
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          FilledButton.tonal(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Got it"),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _confirm(String method) {
-    if (_selectedEmployeeId == null || _cartNotifier.value.isEmpty) {
-      _showErrorDialog(
-        'Missing Data',
-        'Please select an active employee and add at least one item to the cart before confirming the transaction.',
-      );
+    final issues = <String>[];
+    if (_selectedEmployeeId == null) issues.add("Please select an employee");
+    if (_cartNotifier.value.isEmpty) issues.add("Add at least one item to cart");
+
+    if (issues.isNotEmpty) {
+      _showValidationDialog(issues);
       return;
     }
 
-    // 2. Business Validation: Check for Negative Total
     if (_finalTotal < 0) {
       _showErrorDialog(
         'Invalid Discount/Tip',
-        'The final total cannot be negative. Please adjust the discount or tip. Current Total: \$${_finalTotal.toStringAsFixed(2)}',
+        'The final total cannot be negative. Please adjust the discount or tip. Current Total: €${_finalTotal.toStringAsFixed(2)}',
       );
       return;
     }

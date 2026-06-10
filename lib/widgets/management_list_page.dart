@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:kiosk_app/services/database_service.dart';
+import 'package:kiosk_app/services/realtime_service.dart';
 import 'package:kiosk_app/services/sync_service.dart';
 import 'package:kiosk_app/widgets/gradient_scaffold.dart';
 
@@ -37,6 +38,8 @@ class ManagementPageConfig<T> {
   final T Function(String field1, String field2) createItem;
   final T Function(T originalItem, String field1, String field2) updateItem;
   final Future<void> Function()? onRefresh;
+  final bool field2Obscure;
+  final String? field2UpdateHint;
   ManagementPageConfig({
     required this.pageTitle,
     required this.listTitle,
@@ -59,6 +62,8 @@ class ManagementPageConfig<T> {
     required this.updateItem,
     required this.idColumn,
     this.onRefresh,
+    this.field2Obscure = false,
+    this.field2UpdateHint,
   });
 }
 
@@ -78,6 +83,8 @@ class _GenericManagementPageState<T> extends State<GenericManagementPage<T>> {
   final TextEditingController _field1Controller = TextEditingController();
   final TextEditingController _field2Controller = TextEditingController();
   bool _isRefreshing = false;
+  String? _field1Error;
+  String? _field2Error;
   // A helper getter to make accessing the config easier
   ManagementPageConfig<T> get config => widget.config;
 
@@ -85,6 +92,9 @@ class _GenericManagementPageState<T> extends State<GenericManagementPage<T>> {
   void initState() {
     super.initState();
     _loadItems();
+    RealtimeService.instance.setOnChangeCallback((table) {
+      if (table == widget.config.tableName && mounted) _loadItems();
+    });
   }
 
   // Helper method to decide which sync to run
@@ -130,6 +140,7 @@ class _GenericManagementPageState<T> extends State<GenericManagementPage<T>> {
   void dispose() {
     _field1Controller.dispose();
     _field2Controller.dispose();
+    RealtimeService.instance.clearOnChangeCallback();
     super.dispose();
   }
 
@@ -140,23 +151,74 @@ class _GenericManagementPageState<T> extends State<GenericManagementPage<T>> {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  void _clearFieldErrors() {
+    if (_field1Error != null || _field2Error != null) {
+      setState(() {
+        _field1Error = null;
+        _field2Error = null;
+      });
+    }
+  }
+
+  Widget _buildAddForm() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextField(
+          keyboardType: TextInputType.text,
+          controller: _field1Controller,
+          onChanged: (_) => _clearFieldErrors(),
+          decoration: InputDecoration(
+            label: Text(config.field1Label),
+            errorText: _field1Error,
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          keyboardType: config.field2KeyboardType,
+          controller: _field2Controller,
+          obscureText: config.field2Obscure,
+          onChanged: (_) => _clearFieldErrors(),
+          decoration: InputDecoration(
+            label: Text(config.field2Label),
+            errorText: _field2Error,
+          ),
+        ),
+        const SizedBox(height: 16),
+        ElevatedButton(
+          onPressed: _addItem,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF101418),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(6),
+            ),
+          ),
+          child: const Text("Save", style: TextStyle(color: Colors.white)),
+        ),
+      ],
+    );
+  }
+
   Future<void> _addItem() async {
     final f1Value = _field1Controller.text.trim().toUpperCase();
     final f2Value = _field2Controller.text.trim().replaceAll(',', '.');
 
-    final f1Error = config.validateField1(f1Value);
-    if (f1Error != null) {
-      _showSnackBar(f1Error);
+    final f1Err = config.validateField1(f1Value);
+    final f2Err = config.validateField2(f2Value);
+
+    if (f1Err != null || f2Err != null) {
+      setState(() {
+        _field1Error = f1Err;
+        _field2Error = f2Err;
+      });
       return;
     }
 
-    final f2Error = config.validateField2(f2Value);
-    if (f2Error != null) {
-      _showSnackBar(f2Error);
-      return;
-    }
+    setState(() {
+      _field1Error = null;
+      _field2Error = null;
+    });
 
-    // Use the config's createItem function to handle parsing
     final newItem = config.createItem(f1Value, f2Value);
     try {
       await databs.addEPC(table: config.tableName, data: config.toMap(newItem));
@@ -176,73 +238,168 @@ class _GenericManagementPageState<T> extends State<GenericManagementPage<T>> {
       text: config.getName(item),
     );
     final f2UpdateController = TextEditingController(
-      text: config.getValueString(item),
+      text: config.field2Obscure ? '' : config.getValueString(item),
     );
     final itemId = config.getId(item);
 
     await showDialog(
       context: context,
       builder: (dialogContext) {
-        return AlertDialog(
-          title: Text("Update ${config.itemName}"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: f1UpdateController,
-                decoration: InputDecoration(labelText: config.field1Label),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: f2UpdateController,
-                keyboardType: config.field2KeyboardType,
-                decoration: InputDecoration(labelText: config.field2Label),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text("Cancel"),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final newF1Value = f1UpdateController.text.trim().toUpperCase();
-                final newF2Value = f2UpdateController.text.trim().replaceAll(
-                  ',',
-                  '.',
-                );
+        String? f1Error;
+        String? f2Error;
+        bool success = false;
 
-                final f1Error = config.validateField1(newF1Value);
-                if (f1Error != null) {
-                  // Show snackbar on the main scaffold, not the dialog's
-                  _showSnackBar(f1Error);
-                  return;
-                }
-                final f2Error = config.validateField2(newF2Value);
-                if (f2Error != null) {
-                  _showSnackBar(f2Error);
-                  return;
-                }
-                final updatedItem = config.updateItem(
-                  item,
-                  newF1Value,
-                  newF2Value,
-                );
-                await databs.updateEPC(
-                  table: config.tableName,
-                  data: config.toMap(updatedItem),
-                  id: itemId,
-                );
-                _triggerSync();
-                await _loadItems();
-                if (!mounted) return;
-                Navigator.pop(dialogContext); // Close the dialog
-                _showSnackBar('${config.itemName} updated');
-              },
-              child: const Text("Update"),
-            ),
-          ],
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: Colors.white,
+              scrollable: true,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              title: Center(
+                child: Text(
+                  "Update ${config.itemName}",
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1565C0),
+                    fontSize: 20,
+                  ),
+                ),
+              ),
+              content: success
+                  ? const Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.check_circle, color: Colors.green, size: 70),
+                        SizedBox(height: 10),
+                        Text(
+                          "Saved!",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                            color: Colors.green,
+                          ),
+                        ),
+                      ],
+                    )
+                  : Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 8.0,
+                        horizontal: 4.0,
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          TextField(
+                            controller: f1UpdateController,
+                            onChanged: (_) {
+                              if (f1Error != null) {
+                                setDialogState(() => f1Error = null);
+                              }
+                            },
+                            decoration: InputDecoration(
+                              labelText: config.field1Label,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                vertical: 14,
+                                horizontal: 12,
+                              ),
+                              errorText: f1Error,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: f2UpdateController,
+                            keyboardType: config.field2KeyboardType,
+                            obscureText: config.field2Obscure,
+                            onChanged: (_) {
+                              if (f2Error != null) {
+                                setDialogState(() => f2Error = null);
+                              }
+                            },
+                            decoration: InputDecoration(
+                              labelText: config.field2Label,
+                              hintText: config.field2UpdateHint,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                vertical: 14,
+                                horizontal: 12,
+                              ),
+                              errorText: f2Error,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+              actionsAlignment: MainAxisAlignment.spaceEvenly,
+              actions: success
+                  ? []
+                  : [
+                      FilledButton.tonal(
+                        onPressed: () => Navigator.pop(dialogContext),
+                        child: const Text("Cancel"),
+                      ),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1565C0),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                        onPressed: () async {
+                          final newF1 =
+                              f1UpdateController.text.trim().toUpperCase();
+                          final f2Raw = f2UpdateController.text
+                              .trim()
+                              .replaceAll(',', '.');
+                          final keepOriginalF2 =
+                              f2Raw.isEmpty && config.field2Obscure;
+                          final newF2 = keepOriginalF2
+                              ? config.getValueString(item)
+                              : f2Raw;
+
+                          final f1Err = config.validateField1(newF1);
+                          final f2Err = keepOriginalF2
+                              ? null
+                              : config.validateField2(newF2);
+
+                          if (f1Err != null || f2Err != null) {
+                            setDialogState(() {
+                              f1Error = f1Err;
+                              f2Error = f2Err;
+                            });
+                            return;
+                          }
+
+                          final updatedItem =
+                              config.updateItem(item, newF1, newF2);
+                          await databs.updateEPC(
+                            table: config.tableName,
+                            data: config.toMap(updatedItem),
+                            id: itemId,
+                          );
+                          _triggerSync();
+                          await _loadItems();
+                          if (!mounted) return;
+                          setDialogState(() => success = true);
+                          await Future.delayed(const Duration(seconds: 1));
+                          if (context.mounted) Navigator.pop(dialogContext);
+                        },
+                        child: const Text(
+                          "Update",
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ],
+            );
+          },
         );
       },
     );
@@ -331,40 +488,7 @@ class _GenericManagementPageState<T> extends State<GenericManagementPage<T>> {
                               maxWidth: maxContentWidth,
                             ),
                             child: SingleChildScrollView(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  TextField(
-                                    keyboardType: TextInputType.text,
-                                    controller: _field1Controller,
-                                    decoration: InputDecoration(
-                                      label: Text(config.field1Label),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  TextField(
-                                    keyboardType: config.field2KeyboardType,
-                                    controller: _field2Controller,
-                                    decoration: InputDecoration(
-                                      label: Text(config.field2Label),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  ElevatedButton(
-                                    onPressed: _addItem,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF101418),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                    ),
-                                    child: const Text(
-                                      "Save",
-                                      style: TextStyle(color: Colors.white),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                              child: _buildAddForm(),
                             ),
                           ),
                         ),
@@ -382,30 +506,7 @@ class _GenericManagementPageState<T> extends State<GenericManagementPage<T>> {
                           constraints: BoxConstraints(
                             maxWidth: maxContentWidth,
                           ),
-                          child: Column(
-                            children: [
-                              TextField(
-                                keyboardType: TextInputType.text,
-                                controller: _field1Controller,
-                                decoration: InputDecoration(
-                                  label: Text(config.field1Label),
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              TextField(
-                                keyboardType: config.field2KeyboardType,
-                                controller: _field2Controller,
-                                decoration: InputDecoration(
-                                  label: Text(config.field2Label),
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              ElevatedButton(
-                                onPressed: _addItem,
-                                child: const Text("Save"),
-                              ),
-                            ],
-                          ),
+                          child: _buildAddForm(),
                         ),
                       ),
                       const SizedBox(height: 8),

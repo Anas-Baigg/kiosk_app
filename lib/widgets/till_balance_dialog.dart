@@ -16,6 +16,7 @@ class TillBalanceDialog {
 
     if (existing != null) return true;
 
+    if (!context.mounted) return false;
     final result = await _showOpeningDialog(context, todayMidnight);
 
     return result ?? false;
@@ -27,55 +28,198 @@ class TillBalanceDialog {
   ) async {
     final TextEditingController controller = TextEditingController();
 
-    return await showDialog(
+    return await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (_) {
-        return AlertDialog(
-          scrollable: true,
-          title: const Text("Enter Opening Till Balance"),
-          content: TextField(
-            controller: controller,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(
-              labelText: "Opening Balance (€)",
-              hintText: "Example: 120.00",
-            ),
-          ),
-          actions: [
-            FilledButton.tonal(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text("Cancel"),
-            ),
-            TextButton(
-              onPressed: () async {
-                final value = double.tryParse(controller.text) ?? -1;
+        String? errorText;
+        bool success = false;
 
-                if (value < 0) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Please enter a valid amount"),
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              backgroundColor: Colors.white,
+              scrollable: true,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              title: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Center(
+                    child: Text(
+                      "Opening Balance",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green[700],
+                        fontSize: 22,
+                      ),
                     ),
-                  );
-                  return;
-                }
+                  ),
+                  const SizedBox(height: 4),
+                  const Center(
+                    child: Text(
+                      "How much cash is in the till?",
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontSize: 13,
+                        fontWeight: FontWeight.normal,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              content: success
+                  ? const Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.check_circle,
+                          color: Colors.green,
+                          size: 70,
+                        ),
+                        SizedBox(height: 10),
+                        Text(
+                          "Balance recorded!",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                            color: Colors.green,
+                          ),
+                        ),
+                      ],
+                    )
+                  : Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 8.0,
+                        horizontal: 4.0,
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          TextField(
+                            controller: controller,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: "0.00",
+                              prefixIcon: Padding(
+                                padding: const EdgeInsets.only(
+                                  left: 12,
+                                  top: 18,
+                                ),
+                                child: Text(
+                                  "€",
+                                  style: TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.green[700],
+                                  ),
+                                ),
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: BorderSide(
+                                  color: Colors.green[400]!,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: BorderSide(
+                                  color: Colors.green[700]!,
+                                  width: 2,
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: BorderSide(
+                                  color: Colors.green[400]!,
+                                ),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                vertical: 20,
+                                horizontal: 12,
+                              ),
+                            ),
+                            onChanged: (_) {
+                              if (errorText != null) {
+                                setState(() => errorText = null);
+                              }
+                            },
+                          ),
+                          if (errorText != null) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              errorText!,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: Colors.red,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+              actionsAlignment: MainAxisAlignment.spaceEvenly,
+              actions: success
+                  ? []
+                  : [
+                      FilledButton.tonal(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text("Skip"),
+                      ),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green[700],
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                        onPressed: () async {
+                          final value =
+                              double.tryParse(controller.text) ?? -1;
 
-                final uuid = const Uuid();
-                final model = TillBalance(
-                  id: uuid.v4(),
-                  balanceAmount: value,
-                  balanceDate: today,
-                  shopId: AppState.requireShopId(),
-                );
+                          if (value < 0) {
+                            setState(
+                              () => errorText = "Please enter a valid amount",
+                            );
+                            return;
+                          }
 
-                final repo = TillBalanceRepository(DatabaseService.instance);
-                await repo.insertTillBalance(model);
-                SyncService.instance.syncTillbalance();
-                Navigator.pop(context, true);
-              },
-              child: const Text("Save"),
-            ),
-          ],
+                          final uuid = const Uuid();
+                          final model = TillBalance(
+                            id: uuid.v4(),
+                            balanceAmount: value,
+                            balanceDate: today,
+                            shopId: AppState.requireShopId(),
+                          );
+
+                          final repo =
+                              TillBalanceRepository(DatabaseService.instance);
+                          await repo.insertTillBalance(model);
+                          SyncService.instance.syncTillbalance();
+
+                          setState(() => success = true);
+                          await Future.delayed(const Duration(seconds: 1));
+                          if (context.mounted) Navigator.pop(context, true);
+                        },
+                        child: const Text(
+                          "Confirm",
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ],
+            );
+          },
         );
       },
     );

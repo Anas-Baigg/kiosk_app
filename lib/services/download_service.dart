@@ -61,6 +61,24 @@ class PullService {
     );
   }
 
+  Future<void> downloadTillBalance() async {
+    await _downloadReferenceTableSafe(
+      remoteTable: 'till_balance',
+      localTable: DatabaseService.tableTillBalance,
+      idColumn: DatabaseService.colTillBalanceId,
+      normalizeIsActive: false,
+    );
+  }
+
+  /// Downloads all four reference tables — used after reconnecting to catch
+  /// changes missed while offline.
+  Future<void> refreshReferenceData() async {
+    await downloadEmployees();
+    await downloadCuts();
+    await downloadProducts();
+    await downloadTillBalance();
+  }
+
   Future<void> downloadRecentHistory({int historyDays = 30}) async {
     final db = await _dbService.database;
     final cutoffIso = DateTime.now()

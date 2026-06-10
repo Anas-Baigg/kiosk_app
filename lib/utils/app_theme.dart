@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 // Original app color constants — kept for any reference that survived the refactor.
 class AppColors {
   AppColors._();
-  static const Color navBar      = Color(0xFF37393F); // AppBar background
-  static const Color bodyBg      = Color(0xFFD8DBE2); // Scaffold body background
-  static const Color buttonDark  = Color(0xFF101418); // Dark Save/action button
+  static const Color navBar = Color(0xFF37393F); // AppBar background
+  static const Color bodyBg = Color(0xFFD8DBE2); // Scaffold body background
+  static const Color buttonDark = Color(0xFF101418); // Dark Save/action button
   // Legacy aliases
-  static const Color background    = navBar;
+  static const Color background = navBar;
   static const Color bodyBackground = bodyBg;
 }
 

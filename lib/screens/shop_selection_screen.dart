@@ -5,6 +5,7 @@ import 'package:kiosk_app/services/download_service.dart';
 import 'package:kiosk_app/utils/validators/shop_validators.dart';
 import 'package:kiosk_app/widgets/gradient_scaffold.dart';
 import 'package:kiosk_app/views/home_page.dart';
+import 'package:kiosk_app/services/realtime_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:bcrypt/bcrypt.dart';
 
@@ -141,6 +142,7 @@ class _ShopSelectionScreenState extends State<ShopSelectionScreen> {
         adminPasswordHash: adminPasswordHash ?? '',
       );
       await PullService().fullDownloadFromCloud();
+      await RealtimeService.instance.subscribe();
       if (mounted) {
         Navigator.pop(context);
         Navigator.pushReplacement(
