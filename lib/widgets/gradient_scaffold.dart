@@ -69,9 +69,21 @@ class _UniversalScaffoldState extends State<UniversalScaffold> {
     return Scaffold(
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
-        title: Text(widget.title),
+        centerTitle: true,
+        elevation: 2,
+        title: Text(
+          widget.title,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 20.0,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 1.2,
+          ),
+        ),
         flexibleSpace: Container(
-          decoration: const BoxDecoration(color: Color(0xFF37393F)),
+          decoration: const BoxDecoration(
+            color: Color.fromARGB(255, 55, 63, 81),
+          ),
         ),
         foregroundColor: Colors.white,
         actions: [
@@ -108,8 +120,7 @@ class _UniversalScaffoldState extends State<UniversalScaffold> {
                         vertical: 10,
                       ),
                       decoration: BoxDecoration(
-                        color:
-                            isOffline ? Colors.orange[50] : Colors.red[50],
+                        color: isOffline ? Colors.orange[50] : Colors.red[50],
                         border: Border.all(
                           color: isOffline
                               ? Colors.orange[300]!
