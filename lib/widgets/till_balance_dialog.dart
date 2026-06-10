@@ -73,11 +73,7 @@ class TillBalanceDialog {
                   ? const Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
-                          Icons.check_circle,
-                          color: Colors.green,
-                          size: 70,
-                        ),
+                        Icon(Icons.check_circle, color: Colors.green, size: 70),
                         SizedBox(height: 10),
                         Text(
                           "Balance recorded!",
@@ -106,15 +102,16 @@ class TillBalanceDialog {
                             ),
                             textAlign: TextAlign.center,
                             style: const TextStyle(
-                              fontSize: 32,
+                              fontSize: 12,
                               fontWeight: FontWeight.bold,
                             ),
                             decoration: InputDecoration(
                               hintText: "0.00",
+                              // 1. Replaced the weird vertical padding with clean horizontal spacing
                               prefixIcon: Padding(
                                 padding: const EdgeInsets.only(
-                                  left: 12,
-                                  top: 18,
+                                  left: 16,
+                                  right: 8,
                                 ),
                                 child: Text(
                                   "€",
@@ -124,6 +121,11 @@ class TillBalanceDialog {
                                     color: Colors.green[700],
                                   ),
                                 ),
+                              ),
+                              // 2. Added constraints so the prefix icon hugs the text neatly
+                              prefixIconConstraints: const BoxConstraints(
+                                minWidth: 0,
+                                minHeight: 0,
                               ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
@@ -144,9 +146,10 @@ class TillBalanceDialog {
                                   color: Colors.green[400]!,
                                 ),
                               ),
+                              // 3. Tweaked the content padding slightly for a more balanced look
                               contentPadding: const EdgeInsets.symmetric(
-                                vertical: 20,
-                                horizontal: 12,
+                                vertical: 18,
+                                horizontal: 16,
                               ),
                             ),
                             onChanged: (_) {
@@ -185,8 +188,7 @@ class TillBalanceDialog {
                           ),
                         ),
                         onPressed: () async {
-                          final value =
-                              double.tryParse(controller.text) ?? -1;
+                          final value = double.tryParse(controller.text) ?? -1;
 
                           if (value < 0) {
                             setState(
@@ -203,8 +205,9 @@ class TillBalanceDialog {
                             shopId: AppState.requireShopId(),
                           );
 
-                          final repo =
-                              TillBalanceRepository(DatabaseService.instance);
+                          final repo = TillBalanceRepository(
+                            DatabaseService.instance,
+                          );
                           await repo.insertTillBalance(model);
                           SyncService.instance.syncTillbalance();
 
