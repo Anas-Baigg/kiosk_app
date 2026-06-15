@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kiosk_app/utils/app_theme.dart';
 
 class DateRangePicker extends StatelessWidget {
   final TextEditingController dateControllerFrom;
@@ -22,7 +23,7 @@ class DateRangePicker extends StatelessWidget {
     fontWeight: FontWeight.bold,
     fontStyle: FontStyle.normal,
     fontFamily: "RobotoMono",
-    color: Color.fromARGB(255, 55, 63, 81),
+    color: AppColors.onPrimary,
   );
 
   // Helper method for the two date input fields

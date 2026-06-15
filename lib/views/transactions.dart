@@ -9,6 +9,7 @@ import 'package:kiosk_app/services/database/database_service.dart';
 import 'package:kiosk_app/services/database/repositories/time_log_repository.dart';
 import 'package:kiosk_app/services/database/repositories/transaction_repository.dart';
 import 'package:kiosk_app/services/sync_service.dart';
+import 'package:kiosk_app/utils/app_theme.dart';
 import 'package:kiosk_app/widgets/employee_dropdown.dart';
 import 'package:kiosk_app/widgets/gradient_scaffold.dart';
 import 'package:kiosk_app/widgets/payment_summary.dart';
@@ -172,16 +173,15 @@ class _TransactionsState extends State<Transactions> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        backgroundColor: AppColors.surfaceHigh,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: AppColors.outlineVariant),
+        ),
         title: Center(
           child: Text(
             "Cannot Complete",
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Colors.red[700],
-              fontSize: 20,
-            ),
+            style: AppTextStyles.titleMd().copyWith(color: AppColors.error),
           ),
         ),
         content: Column(
@@ -193,16 +193,18 @@ class _TransactionsState extends State<Transactions> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.warning_amber,
-                        color: Colors.red[600],
+                        color: AppColors.warning,
                         size: 20,
                       ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           issue,
-                          style: TextStyle(color: Colors.red[700]),
+                          style: AppTextStyles.bodySm().copyWith(
+                            color: AppColors.onSurface,
+                          ),
                         ),
                       ),
                     ],
@@ -213,8 +215,12 @@ class _TransactionsState extends State<Transactions> {
         ),
         actionsAlignment: MainAxisAlignment.center,
         actions: [
-          FilledButton.tonal(
+          OutlinedButton(
             onPressed: () => Navigator.pop(context),
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: AppColors.outlineVariant),
+              foregroundColor: AppColors.onSurface,
+            ),
             child: const Text("Got it"),
           ),
         ],
@@ -502,7 +508,7 @@ class _TransactionsState extends State<Transactions> {
                             title: Text(item.name),
                             trailing: Text(
                               '${item.quantity} x €${item.unitPrice.toStringAsFixed(2)}',
-                              style: const TextStyle(color: Colors.black),
+                              style: AppTextStyles.labelCaps(),
                             ),
                           );
                         }).toList(),

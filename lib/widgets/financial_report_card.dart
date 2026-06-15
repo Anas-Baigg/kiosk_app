@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:kiosk_app/models/daily_finance.dart';
+import 'package:kiosk_app/utils/app_theme.dart';
 
 class FinancialReportCard extends StatelessWidget {
   final int totalTransactions;
@@ -37,9 +38,9 @@ class FinancialReportCard extends StatelessWidget {
 
             Row(
               children: [
-                Expanded(child: _summaryTile("Transactions", totalTransactions.toString(), Colors.blue)),
-                Expanded(child: _summaryTile("Cash", "€${totalCash.toStringAsFixed(2)}", Colors.green)),
-                Expanded(child: _summaryTile("Card", "€${totalCard.toStringAsFixed(2)}", Colors.purple)),
+                Expanded(child: _summaryTile("Transactions", totalTransactions.toString(), AppColors.primary)),
+                Expanded(child: _summaryTile("Cash", "€${totalCash.toStringAsFixed(2)}", AppColors.success)),
+                Expanded(child: _summaryTile("Card", "€${totalCard.toStringAsFixed(2)}", AppColors.primary)),
               ],
             ),
 
@@ -126,7 +127,10 @@ class FinancialReportCard extends StatelessWidget {
         Text(
           label,
           textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 13, color: Colors.black54),
+          style: const TextStyle(
+            fontSize: 13,
+            color: AppColors.onSurfaceVariant,
+          ),
         ),
       ],
     );
@@ -135,5 +139,5 @@ class FinancialReportCard extends StatelessWidget {
 
 const _headerStyle = TextStyle(
   fontWeight: FontWeight.w600,
-  color: Colors.black54,
+  color: AppColors.onSurfaceVariant,
 );

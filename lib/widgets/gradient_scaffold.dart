@@ -3,6 +3,7 @@ import 'package:kiosk_app/screens/app_state.dart';
 import 'package:kiosk_app/screens/shop_storage.dart';
 import 'package:kiosk_app/services/realtime_service.dart';
 import 'package:kiosk_app/services/sync_service.dart';
+import 'package:kiosk_app/utils/app_theme.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class UniversalScaffold extends StatefulWidget {
@@ -10,6 +11,7 @@ class UniversalScaffold extends StatefulWidget {
   final Widget body;
   final bool showLogout;
   final List<Widget>? actions;
+  final Widget? floatingActionButton;
 
   const UniversalScaffold({
     super.key,
@@ -17,6 +19,7 @@ class UniversalScaffold extends StatefulWidget {
     required this.body,
     this.showLogout = false,
     this.actions,
+    this.floatingActionButton,
   });
 
   @override
@@ -45,11 +48,18 @@ class _UniversalScaffoldState extends State<UniversalScaffold> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
+        title: Text('Logout', style: AppTextStyles.titleMd()),
+        content: Text(
+          'Are you sure you want to logout?',
+          style: AppTextStyles.bodySm(),
+        ),
         actions: [
-          TextButton(
+          OutlinedButton(
             onPressed: () => Navigator.pop(context),
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: AppColors.outlineVariant),
+              foregroundColor: AppColors.onSurface,
+            ),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
@@ -68,24 +78,21 @@ class _UniversalScaffoldState extends State<UniversalScaffold> {
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: true,
+      backgroundColor: AppColors.background,
+      floatingActionButton: widget.floatingActionButton,
       appBar: AppBar(
         centerTitle: true,
-        elevation: 2,
+        elevation: 0,
+        backgroundColor: AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: const Border(
+          bottom: BorderSide(color: AppColors.outlineVariant, width: 1),
+        ),
         title: Text(
           widget.title,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 20.0,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 1.2,
-          ),
+          style: AppTextStyles.titleMd().copyWith(letterSpacing: 1.2),
         ),
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            color: Color.fromARGB(255, 55, 63, 81),
-          ),
-        ),
-        foregroundColor: Colors.white,
+        foregroundColor: AppColors.onSurface,
         actions: [
           if (widget.actions != null) ...widget.actions!,
           if (widget.showLogout)
@@ -96,67 +103,65 @@ class _UniversalScaffoldState extends State<UniversalScaffold> {
         ],
       ),
       body: Container(
-        decoration: const BoxDecoration(color: Color(0xFFD8DBE2)),
+        decoration: const BoxDecoration(color: AppColors.background),
         child: Column(
           children: [
-            AnimatedSize(
-              duration: const Duration(milliseconds: 300),
-              child: ValueListenableBuilder<ConnectivityStatus>(
-                valueListenable: SyncService.instance.connectivityStatus,
-                builder: (context, status, _) {
-                  if (status == ConnectivityStatus.online) {
-                    return const SizedBox.shrink();
-                  }
-                  final isOffline = status == ConnectivityStatus.offline;
-                  return GestureDetector(
-                    onTap: isOffline
-                        ? null
-                        : () => SyncService.instance.syncAll(),
-                    child: Container(
-                      width: double.infinity,
-                      margin: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isOffline ? Colors.orange[50] : Colors.red[50],
-                        border: Border.all(
-                          color: isOffline
-                              ? Colors.orange[300]!
-                              : Colors.red[300]!,
-                        ),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            isOffline ? Icons.wifi_off : Icons.cloud_off,
-                            color: isOffline
-                                ? Colors.orange[700]
-                                : Colors.red[600],
-                            size: 18,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              isOffline
-                                  ? "Working offline — data saves locally"
-                                  : "Sync failed — tap to retry",
-                              style: TextStyle(
-                                color: isOffline
-                                    ? Colors.orange[800]
-                                    : Colors.red[700],
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                        ],
+            ValueListenableBuilder<ConnectivityStatus>(
+              valueListenable: SyncService.instance.connectivityStatus,
+              builder: (context, status, _) {
+                final isOnline = status == ConnectivityStatus.online;
+                final isOffline = status == ConnectivityStatus.offline;
+                final iconColor = isOffline
+                    ? AppColors.warning
+                    : AppColors.error;
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  height: isOnline ? 0 : 40,
+                  width: double.infinity,
+                  decoration: const BoxDecoration(
+                    color: AppColors.surfaceHighest,
+                    border: Border(
+                      bottom: BorderSide(
+                        color: AppColors.outlineVariant,
+                        width: 1,
                       ),
                     ),
-                  );
-                },
-              ),
+                  ),
+                  clipBehavior: Clip.hardEdge,
+                  child: isOnline
+                      ? const SizedBox.shrink()
+                      : InkWell(
+                          onTap: isOffline
+                              ? null
+                              : () => SyncService.instance.syncAll(),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  isOffline
+                                      ? Icons.wifi_off
+                                      : Icons.cloud_off,
+                                  color: iconColor,
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    isOffline
+                                        ? "Offline — changes save locally"
+                                        : "Sync failed — tap to retry",
+                                    style: AppTextStyles.labelCaps().copyWith(
+                                      color: iconColor,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                );
+              },
             ),
             Expanded(child: widget.body),
           ],

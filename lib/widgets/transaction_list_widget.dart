@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:kiosk_app/models/transaction_item.dart';
 import 'package:kiosk_app/models/transaction_model.dart';
 import 'package:kiosk_app/services/database/repositories/transaction_repository.dart';
+import 'package:kiosk_app/utils/app_theme.dart';
 
 class TransactionListWidget extends StatelessWidget {
   final Future<List<TransactionHeader>> transactionsFuture;
@@ -30,7 +31,7 @@ class TransactionListWidget extends StatelessWidget {
             style: TextStyle(
               fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
               fontSize: isTotal ? 18 : 14,
-              color: isDiscount ? Colors.redAccent : Colors.black87,
+              color: isDiscount ? AppColors.error : AppColors.onSurface,
             ),
           ),
           Text(
@@ -39,8 +40,8 @@ class TransactionListWidget extends StatelessWidget {
               fontWeight: isTotal ? FontWeight.w900 : FontWeight.w600,
               fontSize: isTotal ? 18 : 14,
               color: isDiscount
-                  ? Colors.redAccent
-                  : (isTotal ? Colors.indigo.shade800 : Colors.black),
+                  ? AppColors.error
+                  : (isTotal ? AppColors.primary : AppColors.onSurface),
             ),
           ),
         ],
@@ -63,13 +64,14 @@ class TransactionListWidget extends StatelessWidget {
             final hasError = snapshot.hasError;
 
             return AlertDialog(
-              backgroundColor: Colors.white,
+              backgroundColor: AppColors.surfaceHigh,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(15),
+                borderRadius: BorderRadius.circular(16),
+                side: const BorderSide(color: AppColors.outlineVariant),
               ),
-              title: const Text(
+              title: Text(
                 'Transaction Details',
-                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey),
+                style: AppTextStyles.titleMd().copyWith(color: AppColors.primary),
               ),
               content: SingleChildScrollView(
                 child: Column(
@@ -100,7 +102,7 @@ class TransactionListWidget extends StatelessWidget {
                         padding: EdgeInsets.only(left: 8.0, top: 4.0),
                         child: Text(
                           "No items recorded for this transaction.",
-                          style: TextStyle(color: Colors.black),
+                          style: TextStyle(color: AppColors.onSurfaceVariant),
                         ),
                       )
                     else
@@ -112,7 +114,7 @@ class TransactionListWidget extends StatelessWidget {
                           ),
                         ),
                       ),
-                    const Divider(color: Colors.black, thickness: 1.5),
+                    const Divider(color: AppColors.outlineVariant, thickness: 1.5),
                     _buildDetailRow(
                       "Base Total:",
                       "€${header.baseTotal.toStringAsFixed(2)}",
@@ -126,7 +128,7 @@ class TransactionListWidget extends StatelessWidget {
                       "Tip:",
                       "+€${header.tip.toStringAsFixed(2)}",
                     ),
-                    const Divider(color: Colors.black, thickness: 1.5),
+                    const Divider(color: AppColors.outlineVariant, thickness: 1.5),
                     _buildDetailRow(
                       "FINAL TOTAL:",
                       "€${header.finalTotal.toStringAsFixed(2)}",
@@ -140,7 +142,7 @@ class TransactionListWidget extends StatelessWidget {
                   onPressed: () => Navigator.of(context).pop(),
                   child: const Text(
                     'Close',
-                    style: TextStyle(color: Colors.blueGrey),
+                    style: TextStyle(color: AppColors.primary),
                   ),
                 ),
               ],
@@ -170,10 +172,10 @@ class TransactionListWidget extends StatelessWidget {
             ),
           );
         } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const Center(
+          return Center(
             child: Text(
               'No transactions found for the selected date range.',
-              style: TextStyle(fontSize: 16, color: Colors.black),
+              style: AppTextStyles.bodySm(),
             ),
           );
         }
@@ -245,10 +247,10 @@ class TransactionListWidget extends StatelessWidget {
                         children: [
                           Text(
                             "€${tx.finalTotal.toStringAsFixed(2)}",
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontWeight: FontWeight.w900,
                               fontSize: 18,
-                              color: Colors.purple[700],
+                              color: AppColors.primary,
                             ),
                           ),
                           Text(

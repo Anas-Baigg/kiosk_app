@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:kiosk_app/models/cart_item.dart';
 import 'package:kiosk_app/models/products.dart';
+import 'package:kiosk_app/utils/app_theme.dart';
 
 class ProductList extends StatelessWidget {
   final Future<List<Product>> productsFuture;
@@ -21,7 +22,7 @@ class ProductList extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text("Products", style: TextStyle(fontSize: 18)),
+        Text("Products", style: AppTextStyles.titleMd()),
         FutureBuilder<List<Product>>(
           future: productsFuture,
           builder: (context, snapshot) {
@@ -40,19 +41,25 @@ class ProductList extends StatelessWidget {
                   final key = "product_${product.id}";
 
                   return ListTile(
-                    title: Text(product.productName),
-                    subtitle: Text("€${product.price}"),
+                    title: Text(
+                      product.productName,
+                      style: AppTextStyles.bodyLg(),
+                    ),
+                    subtitle: Text(
+                      "€${product.price}",
+                      style: AppTextStyles.labelCaps(),
+                    ),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
                           onPressed: () => onDecrement(key),
                           icon: const Icon(Icons.remove),
-                          color: Colors.black,
+                          color: AppColors.onSurfaceVariant,
                         ),
                         Text(
                           "${cartItems[key]?.quantity ?? 0}",
-                          style: const TextStyle(color: Colors.black),
+                          style: AppTextStyles.price().copyWith(fontSize: 16),
                         ),
                         IconButton(
                           onPressed: () => onIncrement(
@@ -61,7 +68,7 @@ class ProductList extends StatelessWidget {
                             product.price!,
                           ),
                           icon: const Icon(Icons.add),
-                          color: Colors.black,
+                          color: AppColors.primary,
                         ),
                       ],
                     ),

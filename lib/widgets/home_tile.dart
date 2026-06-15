@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kiosk_app/utils/app_theme.dart';
 
 class HomeTileButton extends StatelessWidget {
   final VoidCallback? onPressed;
@@ -20,14 +21,12 @@ class HomeTileButton extends StatelessWidget {
   }) : icon = null,
        label = null;
 
-  static const _labelStyle = TextStyle(
-    fontSize: 18,
+  static final _labelStyle = AppTextStyles.titleMd().copyWith(
     fontWeight: FontWeight.bold,
-    fontFamily: "RobotoMono",
-    color: Color(0xFF37393F),
+    color: AppColors.onPrimary,
   );
 
-  static const _iconColor = Color(0xFF37393F);
+  static const _iconColor = AppColors.onPrimary;
 
   @override
   Widget build(BuildContext context) {

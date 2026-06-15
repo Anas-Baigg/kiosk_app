@@ -3,6 +3,7 @@ import 'package:bcrypt/bcrypt.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kiosk_app/screens/app_state.dart';
+import 'package:kiosk_app/utils/app_theme.dart';
 import 'package:kiosk_app/views/admin_page.dart';
 
 class AdminAuthService {
@@ -96,37 +97,40 @@ class _AdminAuthDialogState extends State<_AdminAuthDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.surfaceHigh,
       scrollable: true,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      title: const Text(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.outlineVariant),
+      ),
+      title: Text(
         'Admin Access',
-        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
+        style: AppTextStyles.titleMd().copyWith(color: AppColors.primary),
       ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Please enter the 5-digit Admin Password'),
+          Text(
+            'Please enter the 5-digit Admin Password',
+            style: AppTextStyles.bodySm(),
+          ),
           const SizedBox(height: 16),
+          Text('PASSWORD', style: AppTextStyles.labelCaps()),
+          const SizedBox(height: 6),
           TextField(
             controller: _passController,
             obscureText: true,
             keyboardType: TextInputType.number,
             autofocus: true,
             enabled: !_lockedOut,
+            style: AppTextStyles.bodyLg(),
             inputFormatters: [
               FilteringTextInputFormatter.digitsOnly,
               LengthLimitingTextInputFormatter(5),
             ],
             decoration: InputDecoration(
               hintText: 'Enter Password',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                vertical: 14,
-                horizontal: 12,
-              ),
               errorText: _lockedOut ? null : _errorText,
             ),
             onSubmitted: _lockedOut ? null : (_) => _handleVerify(),
@@ -136,8 +140,8 @@ class _AdminAuthDialogState extends State<_AdminAuthDialog> {
             Text(
               'Too many failed attempts.\nTry again in $_countdown seconds.',
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.red,
+              style: AppTextStyles.bodySm().copyWith(
+                color: AppColors.error,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -146,19 +150,17 @@ class _AdminAuthDialogState extends State<_AdminAuthDialog> {
       ),
       actionsAlignment: MainAxisAlignment.spaceEvenly,
       actions: [
-        FilledButton.tonal(
+        OutlinedButton(
           onPressed: () => Navigator.pop(context),
+          style: OutlinedButton.styleFrom(
+            side: const BorderSide(color: AppColors.outlineVariant),
+            foregroundColor: AppColors.onSurface,
+          ),
           child: const Text('Cancel'),
         ),
         ElevatedButton(
           onPressed: _lockedOut ? null : _handleVerify,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.green[600],
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(6),
-            ),
-          ),
-          child: const Text('Verify', style: TextStyle(color: Colors.white)),
+          child: const Text('Verify'),
         ),
       ],
     );

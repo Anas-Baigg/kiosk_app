@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:kiosk_app/models/cart_item.dart';
 import 'package:kiosk_app/models/cuts.dart';
+import 'package:kiosk_app/utils/app_theme.dart';
 
 class ServiceList extends StatelessWidget {
   final Future<List<Cuts>> cutsFuture;
@@ -21,7 +22,7 @@ class ServiceList extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text("Services", style: TextStyle(fontSize: 18)),
+        Text("Services", style: AppTextStyles.titleMd()),
         FutureBuilder<List<Cuts>>(
           future: cutsFuture,
           builder: (context, snapshot) {
@@ -40,25 +41,28 @@ class ServiceList extends StatelessWidget {
                   final key = "cut_${cut.id}";
 
                   return ListTile(
-                    title: Text(cut.cutname),
-                    subtitle: Text("€${cut.price}"),
+                    title: Text(cut.cutname, style: AppTextStyles.bodyLg()),
+                    subtitle: Text(
+                      "€${cut.price}",
+                      style: AppTextStyles.labelCaps(),
+                    ),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
                           onPressed: () => onDecrement(key),
                           icon: const Icon(Icons.remove),
-                          color: Colors.black,
+                          color: AppColors.onSurfaceVariant,
                         ),
                         Text(
                           "${cartItems[key]?.quantity ?? 0}",
-                          style: const TextStyle(color: Colors.black),
+                          style: AppTextStyles.price().copyWith(fontSize: 16),
                         ),
                         IconButton(
                           onPressed: () =>
                               onIncrement(key, cut.cutname, cut.price!),
                           icon: const Icon(Icons.add),
-                          color: Colors.black,
+                          color: AppColors.primary,
                         ),
                       ],
                     ),

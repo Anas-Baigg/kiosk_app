@@ -4,6 +4,7 @@ import 'package:kiosk_app/screens/app_state.dart';
 import 'package:kiosk_app/services/database/database_service.dart';
 import 'package:kiosk_app/services/database/repositories/till_balance_repository.dart';
 import 'package:kiosk_app/services/sync_service.dart';
+import 'package:kiosk_app/utils/app_theme.dart';
 import 'package:uuid/uuid.dart';
 
 class TillBalanceDialog {
@@ -38,10 +39,11 @@ class TillBalanceDialog {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              backgroundColor: Colors.white,
+              backgroundColor: AppColors.surfaceHigh,
               scrollable: true,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
+                side: const BorderSide(color: AppColors.outlineVariant),
               ),
               title: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -49,39 +51,36 @@ class TillBalanceDialog {
                   Center(
                     child: Text(
                       "Opening Balance",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green[700],
-                        fontSize: 22,
+                      style: AppTextStyles.titleMd().copyWith(
+                        color: AppColors.primary,
                       ),
                     ),
                   ),
                   const SizedBox(height: 4),
-                  const Center(
+                  Center(
                     child: Text(
                       "How much cash is in the till?",
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontSize: 13,
-                        fontWeight: FontWeight.normal,
-                      ),
+                      style: AppTextStyles.bodySm(),
                     ),
                   ),
                 ],
               ),
               content: success
-                  ? const Column(
+                  ? Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.check_circle, color: Colors.green, size: 70),
-                        SizedBox(height: 10),
+                        const Icon(
+                          Icons.check_circle,
+                          color: AppColors.primary,
+                          size: 70,
+                        ),
+                        const SizedBox(height: 10),
                         Text(
                           "Balance recorded!",
                           textAlign: TextAlign.center,
-                          style: TextStyle(
+                          style: AppTextStyles.bodyLg().copyWith(
                             fontWeight: FontWeight.w600,
-                            fontSize: 16,
-                            color: Colors.green,
+                            color: AppColors.primary,
                           ),
                         ),
                       ],
@@ -101,52 +100,24 @@ class TillBalanceDialog {
                               decimal: true,
                             ),
                             textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: AppTextStyles.price().copyWith(fontSize: 32),
                             decoration: InputDecoration(
                               hintText: "0.00",
-                              // 1. Replaced the weird vertical padding with clean horizontal spacing
-                              prefixIcon: Padding(
-                                padding: const EdgeInsets.only(
-                                  left: 16,
-                                  right: 8,
-                                ),
+                              prefixIcon: const Padding(
+                                padding: EdgeInsets.only(left: 16, right: 8),
                                 child: Text(
                                   "€",
                                   style: TextStyle(
                                     fontSize: 24,
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.green[700],
+                                    color: AppColors.primary,
                                   ),
                                 ),
                               ),
-                              // 2. Added constraints so the prefix icon hugs the text neatly
                               prefixIconConstraints: const BoxConstraints(
                                 minWidth: 0,
                                 minHeight: 0,
                               ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                borderSide: BorderSide(
-                                  color: Colors.green[400]!,
-                                ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                borderSide: BorderSide(
-                                  color: Colors.green[700]!,
-                                  width: 2,
-                                ),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                borderSide: BorderSide(
-                                  color: Colors.green[400]!,
-                                ),
-                              ),
-                              // 3. Tweaked the content padding slightly for a more balanced look
                               contentPadding: const EdgeInsets.symmetric(
                                 vertical: 18,
                                 horizontal: 16,
@@ -163,8 +134,8 @@ class TillBalanceDialog {
                             Text(
                               errorText!,
                               textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: Colors.red,
+                              style: AppTextStyles.bodySm().copyWith(
+                                color: AppColors.error,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -176,17 +147,17 @@ class TillBalanceDialog {
               actions: success
                   ? []
                   : [
-                      FilledButton.tonal(
+                      OutlinedButton(
                         onPressed: () => Navigator.pop(context, false),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(
+                            color: AppColors.outlineVariant,
+                          ),
+                          foregroundColor: AppColors.onSurface,
+                        ),
                         child: const Text("Skip"),
                       ),
                       ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green[700],
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                        ),
                         onPressed: () async {
                           final value = double.tryParse(controller.text) ?? -1;
 
@@ -215,10 +186,7 @@ class TillBalanceDialog {
                           await Future.delayed(const Duration(seconds: 1));
                           if (context.mounted) Navigator.pop(context, true);
                         },
-                        child: const Text(
-                          "Confirm",
-                          style: TextStyle(color: Colors.white),
-                        ),
+                        child: const Text("Confirm"),
                       ),
                     ],
             );

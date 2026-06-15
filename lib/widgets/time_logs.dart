@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:kiosk_app/models/time_log_display.dart';
+import 'package:kiosk_app/utils/app_theme.dart';
 
 class TimeLogs extends StatelessWidget {
   final Future<List<TimeLogDisplay>> timeLogs;
@@ -25,10 +26,10 @@ class TimeLogs extends StatelessWidget {
             ),
           );
         } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const Center(
+          return Center(
             child: Text(
               'No timeLogs found for the selected date range.',
-              style: TextStyle(fontSize: 16, color: Colors.black),
+              style: AppTextStyles.bodySm(),
             ),
           );
         }

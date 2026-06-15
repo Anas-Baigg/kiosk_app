@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kiosk_app/utils/app_theme.dart';
 
 class PaymentSummary extends StatelessWidget {
   final TextEditingController tipController;
@@ -22,11 +23,9 @@ class PaymentSummary extends StatelessWidget {
     required this.onConfirmCard,
   });
 
-  static const _labelStyle = TextStyle(
-    fontSize: 18,
+  static final _labelStyle = AppTextStyles.titleMd().copyWith(
     fontWeight: FontWeight.bold,
-    fontFamily: "RobotoMono",
-    color: Color(0xFF37393F),
+    color: AppColors.onPrimary,
   );
 
   @override
@@ -81,7 +80,7 @@ class PaymentSummary extends StatelessWidget {
                   ),
                 ),
                 onPressed: onConfirmCash,
-                child: const Text("Cash", style: _labelStyle),
+                child: Text("Cash", style: _labelStyle),
               ),
             ),
             const SizedBox(width: 10),
@@ -98,7 +97,7 @@ class PaymentSummary extends StatelessWidget {
                   ),
                 ),
                 onPressed: onConfirmCard,
-                child: const Text("Card", style: _labelStyle),
+                child: Text("Card", style: _labelStyle),
               ),
             ),
           ],

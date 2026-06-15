@@ -3,6 +3,7 @@ import 'package:kiosk_app/services/database/database_service.dart';
 import 'package:kiosk_app/services/database/repositories/employee_repository.dart';
 import 'package:kiosk_app/services/database/repositories/time_log_repository.dart';
 import 'package:kiosk_app/services/sync_service.dart';
+import 'package:kiosk_app/utils/app_theme.dart';
 
 enum ClockDialogAction { clockIn, clockOut }
 
@@ -19,24 +20,23 @@ class ClockDialog {
       barrierDismissible: false,
       builder: (BuildContext context) {
         String? feedback;
-        Color feedbackColor = Colors.red;
+        Color feedbackColor = AppColors.error;
         bool success = false;
 
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              backgroundColor: Colors.white,
+              backgroundColor: AppColors.surfaceHigh,
               scrollable: true,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
+                side: const BorderSide(color: AppColors.outlineVariant),
               ),
               title: Center(
                 child: Text(
                   isIn ? "Clock In" : "Clock Out",
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: isIn ? Colors.green[600] : Colors.red[600],
-                    fontSize: 22,
+                  style: AppTextStyles.titleMd().copyWith(
+                    color: AppColors.primary,
                   ),
                 ),
               ),
@@ -47,7 +47,7 @@ class ClockDialog {
                       children: [
                         const Icon(
                           Icons.check_circle,
-                          color: Colors.green,
+                          color: AppColors.primary,
                           size: 70,
                         ),
                         const SizedBox(height: 10),
@@ -56,10 +56,9 @@ class ClockDialog {
                               ? "Clocked in successfully!"
                               : "Clocked out successfully!",
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
+                          style: AppTextStyles.bodyLg().copyWith(
                             fontWeight: FontWeight.w600,
-                            fontSize: 16,
-                            color: Colors.green,
+                            color: AppColors.primary,
                           ),
                         ),
                       ],
@@ -73,33 +72,29 @@ class ClockDialog {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
+                          Text("PASSCODE", style: AppTextStyles.labelCaps()),
+                          const SizedBox(height: 6),
                           TextField(
                             controller: passController,
-                            decoration: InputDecoration(
-                              labelText: "Enter Your Passcode",
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                vertical: 14,
-                                horizontal: 12,
-                              ),
+                            decoration: const InputDecoration(
+                              hintText: "Enter your passcode",
                             ),
                             keyboardType: TextInputType.number,
                             obscureText: true,
+                            style: AppTextStyles.bodyLg(),
                           ),
                           const SizedBox(height: 10),
                           Text(
                             "Please enter your 5-digit passcode.",
                             textAlign: TextAlign.center,
-                            style: TextStyle(color: Colors.grey[600]),
+                            style: AppTextStyles.bodySm(),
                           ),
                           if (feedback != null) ...[
                             const SizedBox(height: 8),
                             Text(
                               feedback!,
                               textAlign: TextAlign.center,
-                              style: TextStyle(
+                              style: AppTextStyles.bodySm().copyWith(
                                 color: feedbackColor,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -113,8 +108,14 @@ class ClockDialog {
               actions: success
                   ? []
                   : [
-                      FilledButton.tonal(
+                      OutlinedButton(
                         onPressed: () => Navigator.pop(context, false),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(
+                            color: AppColors.outlineVariant,
+                          ),
+                          foregroundColor: AppColors.onSurface,
+                        ),
                         child: const Text("Cancel"),
                       ),
                       ElevatedButton(
@@ -125,7 +126,7 @@ class ClockDialog {
                             setState(() {
                               feedback =
                                   "Please enter a valid numeric passcode.";
-                              feedbackColor = Colors.red;
+                              feedbackColor = AppColors.error;
                             });
                             return;
                           }
@@ -139,7 +140,7 @@ class ClockDialog {
                             setState(() {
                               feedback =
                                   "Wrong passcode or employee not registered.";
-                              feedbackColor = Colors.red;
+                              feedbackColor = AppColors.error;
                             });
                             return;
                           }
@@ -149,7 +150,7 @@ class ClockDialog {
                             if (res == -1) {
                               setState(() {
                                 feedback = "You already have an open shift";
-                                feedbackColor = Colors.red;
+                                feedbackColor = AppColors.error;
                               });
                               return;
                             }
@@ -163,7 +164,7 @@ class ClockDialog {
                             if (!ok) {
                               setState(() {
                                 feedback = "You are not clocked in.";
-                                feedbackColor = Colors.red;
+                                feedbackColor = AppColors.error;
                               });
                               return;
                             }
@@ -173,17 +174,7 @@ class ClockDialog {
                             if (context.mounted) Navigator.pop(context, true);
                           }
                         },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              isIn ? Colors.green[600] : Colors.red[600],
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                        ),
-                        child: Text(
-                          isIn ? "Clock In" : "Clock Out",
-                          style: const TextStyle(color: Colors.white),
-                        ),
+                        child: Text(isIn ? "Clock In" : "Clock Out"),
                       ),
                     ],
             );
