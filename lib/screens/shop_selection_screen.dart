@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:kiosk_app/screens/app_state.dart';
 import 'package:kiosk_app/screens/shop_storage.dart';
 import 'package:kiosk_app/services/download_service.dart';
+import 'package:kiosk_app/utils/app_theme.dart';
 import 'package:kiosk_app/utils/validators/shop_validators.dart';
 import 'package:kiosk_app/widgets/gradient_scaffold.dart';
 import 'package:kiosk_app/views/home_page.dart';
@@ -175,156 +176,169 @@ class _ShopSelectionScreenState extends State<ShopSelectionScreen> {
                 padding: const EdgeInsets.all(20),
                 child: ConstrainedBox(
                   constraints: BoxConstraints(maxWidth: maxWidth),
-                  child: Card(
-                    elevation: isWide ? 10 : 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Padding(
-                      padding: EdgeInsets.all(isWide ? 24 : 12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          if (isWide) ...[
-                            Text(
-                              'Choose a shop to continue',
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context).textTheme.headlineSmall
-                                  ?.copyWith(fontWeight: FontWeight.w700),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              'You can also create a new shop below.',
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
-                            const SizedBox(height: 18),
-                          ],
-
-                          // Shops list
-                          if (_shops.isEmpty)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 24),
-                              child: Column(
-                                children: [
-                                  const Icon(Icons.store_outlined, size: 44),
-                                  const SizedBox(height: 10),
-                                  Text(
-                                    'No shops yet',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium
-                                        ?.copyWith(fontWeight: FontWeight.w600),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    'Create your first shop using the form below.',
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.bodyMedium,
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ],
-                              ),
-                            )
-                          else
-                            ListView.separated(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              itemCount: _shops.length,
-                              separatorBuilder: (_, _) =>
-                                  const Divider(height: 1),
-                              itemBuilder: (context, index) {
-                                final shop = _shops[index];
-                                return ListTile(
-                                  leading: const Icon(Icons.store),
-                                  title: Text(shop['name'] ?? ''),
-                                  subtitle: Text('ID: ${shop['id']}'),
-                                  trailing: const Icon(Icons.chevron_right),
-                                  onTap: () => _selectShop(shop),
-                                );
-                              },
-                            ),
-
-                          const Divider(),
-
-                          Text(
-                            'Create a new shop',
-                            style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(fontWeight: FontWeight.w700),
+                  child: Padding(
+                    padding: EdgeInsets.all(isWide ? 24 : 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          'Select Shop',
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.titleMd().copyWith(
+                            color: AppColors.primary,
                           ),
-                          const SizedBox(height: 10),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Choose a shop to continue, or create a new one below.',
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.bodySm(),
+                        ),
+                        const SizedBox(height: 18),
 
-                          Form(
-                            key: _createFormKey,
-                            child: Row(
+                        // Shops list
+                        if (_shops.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 24),
+                            child: Column(
                               children: [
-                                Expanded(
-                                  child: TextFormField(
-                                    controller: _shopNameController,
-                                    textInputAction: TextInputAction.done,
-                                    keyboardType: TextInputType.name,
-                                    autovalidateMode:
-                                        AutovalidateMode.onUserInteraction,
-                                    validator: ShopValidators.shopName,
-                                    onFieldSubmitted: (_) =>
-                                        _creating ? null : _createShop(),
-                                    decoration: const InputDecoration(
-                                      hintText: 'New shop name',
-                                      prefixIcon: Icon(Icons.add_business),
-                                    ),
-                                  ),
+                                const Icon(
+                                  Icons.store_outlined,
+                                  size: 44,
+                                  color: AppColors.onSurfaceVariant,
                                 ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: TextFormField(
-                                    controller: _adminPassController,
-                                    textInputAction: TextInputAction.done,
-                                    keyboardType: TextInputType.number,
-
-                                    autovalidateMode:
-                                        AutovalidateMode.onUserInteraction,
-                                    validator: ShopValidators.adminPassword,
-
-                                    onFieldSubmitted: (_) =>
-                                        _creating ? null : _createShop(),
-                                    decoration: const InputDecoration(
-                                      hintText: '5-Digit Admin Pass',
-                                      labelText: 'Admin Password',
-                                      prefixIcon: Icon(
-                                        Icons.add_moderator_outlined,
-                                      ),
-                                    ),
-                                  ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  'No shops yet',
+                                  style: AppTextStyles.titleMd(),
                                 ),
-                                const SizedBox(width: 10),
-                                SizedBox(
-                                  height: 48,
-                                  child: _creating
-                                      ? const Padding(
-                                          padding: EdgeInsets.symmetric(
-                                            horizontal: 14,
-                                          ),
-                                          child: Center(
-                                            child: SizedBox(
-                                              width: 18,
-                                              height: 18,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
-                                              ),
-                                            ),
-                                          ),
-                                        )
-                                      : ElevatedButton(
-                                          onPressed: _createShop,
-                                          child: const Text('Create'),
-                                        ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Create your first shop using the form below.',
+                                  style: AppTextStyles.bodySm(),
+                                  textAlign: TextAlign.center,
                                 ),
                               ],
                             ),
+                          )
+                        else
+                          ListView.separated(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: _shops.length,
+                            separatorBuilder: (_, _) =>
+                                const SizedBox(height: 10),
+                            itemBuilder: (context, index) {
+                              final shop = _shops[index];
+                              return Container(
+                                decoration: BoxDecoration(
+                                  color: AppColors.surfaceContainer,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: AppColors.outlineVariant,
+                                  ),
+                                ),
+                                child: ListTile(
+                                  leading: const Icon(
+                                    Icons.storefront,
+                                    color: AppColors.primary,
+                                  ),
+                                  title: Text(
+                                    shop['name'] ?? '',
+                                    style: AppTextStyles.bodyLg(),
+                                  ),
+                                  trailing: const Icon(
+                                    Icons.chevron_right,
+                                    color: AppColors.outlineVariant,
+                                  ),
+                                  onTap: () => _selectShop(shop),
+                                ),
+                              );
+                            },
                           ),
-                        ],
-                      ),
+
+                        const SizedBox(height: 20),
+                        const Divider(color: AppColors.outlineVariant),
+                        const SizedBox(height: 12),
+
+                        Text(
+                          'Create a New Shop',
+                          style: AppTextStyles.titleMd().copyWith(
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+
+                        Form(
+                          key: _createFormKey,
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: TextFormField(
+                                  controller: _shopNameController,
+                                  textInputAction: TextInputAction.done,
+                                  keyboardType: TextInputType.name,
+                                  autovalidateMode:
+                                      AutovalidateMode.onUserInteraction,
+                                  validator: ShopValidators.shopName,
+                                  onFieldSubmitted: (_) =>
+                                      _creating ? null : _createShop(),
+                                  decoration: const InputDecoration(
+                                    hintText: 'New shop name',
+                                    labelText: 'Shop Name',
+                                    prefixIcon: Icon(Icons.add_business),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: TextFormField(
+                                  controller: _adminPassController,
+                                  textInputAction: TextInputAction.done,
+                                  keyboardType: TextInputType.number,
+
+                                  autovalidateMode:
+                                      AutovalidateMode.onUserInteraction,
+                                  validator: ShopValidators.adminPassword,
+
+                                  onFieldSubmitted: (_) =>
+                                      _creating ? null : _createShop(),
+                                  decoration: const InputDecoration(
+                                    hintText: '5-Digit Admin Pass',
+                                    labelText: 'Admin Password',
+                                    prefixIcon: Icon(
+                                      Icons.add_moderator_outlined,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              SizedBox(
+                                height: 48,
+                                child: _creating
+                                    ? const Padding(
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: 14,
+                                        ),
+                                        child: Center(
+                                          child: SizedBox(
+                                            width: 18,
+                                            height: 18,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                    : ElevatedButton(
+                                        onPressed: _createShop,
+                                        child: const Text('Create'),
+                                      ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),

@@ -9,6 +9,7 @@ import 'package:kiosk_app/services/database/repositories/time_log_repository.dar
 import 'package:kiosk_app/services/database/repositories/till_balance_repository.dart';
 import 'package:kiosk_app/services/database/repositories/transaction_repository.dart';
 import 'package:kiosk_app/services/download_service.dart';
+import 'package:kiosk_app/utils/app_theme.dart';
 import 'package:kiosk_app/widgets/date_range_picker.dart';
 import 'package:kiosk_app/widgets/financial_report_card.dart';
 import 'package:kiosk_app/widgets/gradient_scaffold.dart';
@@ -422,7 +423,7 @@ class _ReportsPageState extends State<ReportsPage> {
             return Center(
               child: Text(
                 'Error: $_errorMessage',
-                style: const TextStyle(color: Colors.red),
+                style: AppTextStyles.bodyLg().copyWith(color: AppColors.error),
               ),
             );
           }

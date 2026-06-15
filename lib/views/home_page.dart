@@ -22,7 +22,11 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
-    final crossAxisCount = width > 600 ? 3 : 2;
+    final crossAxisCount = width > 900
+        ? 3
+        : width > 600
+        ? 2
+        : 1;
 
     return UniversalScaffold(
       title: shopName!.toUpperCase(),
@@ -66,9 +70,9 @@ class _HomePageState extends State<HomePage> {
             padding: const EdgeInsets.all(10.0),
             child: GridView.count(
               crossAxisCount: crossAxisCount,
-              crossAxisSpacing: 10.0,
-              mainAxisSpacing: 10.0,
-              childAspectRatio: 2,
+              crossAxisSpacing: 12.0,
+              mainAxisSpacing: 12.0,
+              childAspectRatio: 1.4,
               children: [
                 HomeTileButton(
                   icon: Icons.login,

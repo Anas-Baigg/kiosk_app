@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:kiosk_app/utils/app_constants.dart';
+import 'package:kiosk_app/utils/app_theme.dart';
 import 'package:kiosk_app/widgets/gradient_scaffold.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:kiosk_app/utils/validators/auth_validators.dart';
@@ -90,127 +92,116 @@ class _AuthScreenState extends State<AuthScreen> {
                   ),
                   child: ConstrainedBox(
                     constraints: BoxConstraints(maxWidth: maxFormWidth),
-                    child: Card(
-                      elevation: isWide ? 10 : 0,
-                      color: isWide
-                          ? Colors.white.withValues(alpha: 0.92)
-                          : Colors.transparent,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Padding(
-                        padding: EdgeInsets.all(isWide ? 28 : 0),
-                        child: Form(
-                          key: _formKey,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              if (isWide) ...[
-                                Text(
-                                  _isSignUp
-                                      ? 'Create your owner account'
-                                      : 'Welcome back',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .headlineSmall
-                                      ?.copyWith(fontWeight: FontWeight.w700),
-                                  textAlign: TextAlign.center,
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  _isSignUp
-                                      ? 'Register to manage your kiosk'
-                                      : 'Login to continue',
-                                  style: Theme.of(context).textTheme.bodyMedium,
-                                  textAlign: TextAlign.center,
-                                ),
-                                const SizedBox(height: 22),
-                              ],
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            AppConstants.appName,
+                            style: AppTextStyles.headlineLg().copyWith(
+                              color: AppColors.primary,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            "Staff & Management Portal",
+                            style: AppTextStyles.labelCaps(),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 32),
 
-                              TextFormField(
-                                controller: _emailController,
-                                keyboardType: TextInputType.emailAddress,
-                                textInputAction: TextInputAction.next,
-                                autovalidateMode:
-                                    AutovalidateMode.onUserInteraction,
-                                validator: Validators.email,
-                                decoration: const InputDecoration(
-                                  labelText: 'Email',
-                                  prefixIcon: Icon(Icons.email_outlined),
+                          TextFormField(
+                            controller: _emailController,
+                            keyboardType: TextInputType.emailAddress,
+                            textInputAction: TextInputAction.next,
+                            style: AppTextStyles.bodyLg(),
+                            autovalidateMode:
+                                AutovalidateMode.onUserInteraction,
+                            validator: Validators.email,
+                            decoration: const InputDecoration(
+                              labelText: 'Email',
+                              prefixIcon: Icon(Icons.email_outlined),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+
+                          TextFormField(
+                            controller: _passwordController,
+                            obscureText: _obscurePassword,
+                            textInputAction: TextInputAction.done,
+                            style: AppTextStyles.bodyLg(),
+                            autovalidateMode:
+                                AutovalidateMode.onUserInteraction,
+                            validator: (v) =>
+                                Validators.password(v, isSignUp: _isSignUp),
+                            onFieldSubmitted: (_) =>
+                                _isLoading ? null : _handleAuth(),
+                            decoration: InputDecoration(
+                              labelText: 'Password',
+                              prefixIcon: const Icon(Icons.lock_outline),
+                              suffixIcon: IconButton(
+                                tooltip: _obscurePassword
+                                    ? 'Show password'
+                                    : 'Hide password',
+                                icon: Icon(
+                                  _obscurePassword
+                                      ? Icons.visibility_off
+                                      : Icons.visibility,
+                                ),
+                                onPressed: () => setState(
+                                  () => _obscurePassword = !_obscurePassword,
                                 ),
                               ),
-                              const SizedBox(height: 14),
+                            ),
+                          ),
 
-                              TextFormField(
-                                controller: _passwordController,
-                                obscureText: _obscurePassword,
-                                textInputAction: TextInputAction.done,
-                                autovalidateMode:
-                                    AutovalidateMode.onUserInteraction,
-                                validator: (v) =>
-                                    Validators.password(v, isSignUp: _isSignUp),
-                                onFieldSubmitted: (_) =>
-                                    _isLoading ? null : _handleAuth(),
-                                decoration: InputDecoration(
-                                  labelText: 'Password',
-                                  prefixIcon: const Icon(Icons.lock_outline),
-                                  suffixIcon: IconButton(
-                                    tooltip: _obscurePassword
-                                        ? 'Show password'
-                                        : 'Hide password',
+                          const SizedBox(height: 24),
+
+                          SizedBox(
+                            height: 48,
+                            child: _isLoading
+                                ? const Center(
+                                    child: CircularProgressIndicator(),
+                                  )
+                                : ElevatedButton.icon(
+                                    onPressed: _handleAuth,
                                     icon: Icon(
-                                      _obscurePassword
-                                          ? Icons.visibility_off
-                                          : Icons.visibility,
+                                      _isSignUp
+                                          ? Icons.person_add_alt_1
+                                          : Icons.login,
                                     ),
-                                    onPressed: () => setState(
-                                      () =>
-                                          _obscurePassword = !_obscurePassword,
+                                    label: Text(
+                                      _isSignUp ? 'Register' : 'Login',
                                     ),
                                   ),
-                                ),
-                              ),
-
-                              const SizedBox(height: 18),
-
-                              SizedBox(
-                                height: 48,
-                                child: _isLoading
-                                    ? const Center(
-                                        child: CircularProgressIndicator(),
-                                      )
-                                    : ElevatedButton.icon(
-                                        onPressed: _handleAuth,
-                                        icon: Icon(
-                                          _isSignUp
-                                              ? Icons.person_add_alt_1
-                                              : Icons.login,
-                                        ),
-                                        label: Text(
-                                          _isSignUp ? 'Register' : 'Login',
-                                        ),
-                                      ),
-                              ),
-
-                              const SizedBox(height: 10),
-
-                              TextButton(
-                                onPressed: () => setState(() {
-                                  _isSignUp = !_isSignUp;
-
-                                  // Optional: re-run validation when switching mode
-                                  _formKey.currentState?.validate();
-                                }),
-                                child: Text(
-                                  _isSignUp
-                                      ? 'Already have an account? Login'
-                                      : 'New client? Register your business',
-                                ),
-                              ),
-                            ],
                           ),
-                        ),
+
+                          const SizedBox(height: 12),
+
+                          OutlinedButton(
+                            onPressed: () => setState(() {
+                              _isSignUp = !_isSignUp;
+
+                              // Optional: re-run validation when switching mode
+                              _formKey.currentState?.validate();
+                            }),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(
+                                color: AppColors.outlineVariant,
+                              ),
+                              foregroundColor: AppColors.onSurface,
+                              minimumSize: const Size(0, 48),
+                            ),
+                            child: Text(
+                              _isSignUp
+                                  ? 'Already have an account? Login'
+                                  : 'New client? Register your business',
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
