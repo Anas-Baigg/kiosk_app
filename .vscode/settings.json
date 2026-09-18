@@ -1,3 +1,6 @@
 {
-  "dart.flutterSdkPath": "~/dev/flutter"
+  "dart.flutterSdkPath": "~/dev/flutter",
+  "java.configuration.updateBuildConfiguration": "interactive",
+  "java.import.gradle.java.home": "C:\\Program Files\\Java\\jdk-17.0.18",
+  "java.jdt.ls.java.home": "C:\\Program Files\\Java\\jdk-17.0.18"
 }

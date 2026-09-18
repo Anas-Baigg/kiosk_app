@@ -1,4 +1,4 @@
 class AppConstants {
   AppConstants._();
-  static const String appName = 'Barber Pos';
+  static const String appName = 'Barber POS';
 }

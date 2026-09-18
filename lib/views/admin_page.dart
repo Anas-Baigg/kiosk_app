@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:kiosk_app/screens/app_state.dart';
 import 'package:kiosk_app/utils/app_constants.dart';
 import 'package:kiosk_app/utils/app_theme.dart';
 import 'package:kiosk_app/widgets/home_tile.dart';
